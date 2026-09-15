@@ -1,0 +1,49 @@
+{
+  "name": "cmc-witness",
+  "version": "0.1.0",
+  "description": "CMC Witness — self-funding market-truth agent for CoinMarketCap Build with CMC hackathon (x402 + MCP)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "cmc-witness": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "witness": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp/server.ts",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "coinmarketcap",
+    "x402",
+    "mcp",
+    "ai-agent",
+    "BuildwithCMC",
+    "market-truth"
+  ],
+  "author": "CryptoCT01",
+  "license": "MIT",
+  "packageManager": "pnpm@12.4.1",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@x402/axios": "^2.25.0",
+    "@x402/evm": "^2.25.0",
+    "axios": "^1.20.0",
+    "dotenv": "^17.4.2",
+    "viem": "^2.56.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

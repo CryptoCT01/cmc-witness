@@ -1,0 +1,38 @@
+{
+  "status": {
+    "timestamp": "2026-09-15T07:00:00.000Z",
+    "error_code": 0,
+    "error_message": null,
+    "elapsed": 10,
+    "credit_count": 1
+  },
+  "data": {
+    "ETH": {
+      "id": 1027,
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "slug": "ethereum",
+      "cmc_rank": 2,
+      "num_market_pairs": 9500,
+      "circulating_supply": 120400000,
+      "total_supply": 120400000,
+      "max_supply": null,
+      "last_updated": "2026-09-15T07:00:00.000Z",
+      "quote": {
+        "USD": {
+          "price": 3421.55,
+          "volume_24h": 14200000000,
+          "volume_change_24h": 5.1,
+          "percent_change_1h": -0.22,
+          "percent_change_24h": 2.6,
+          "percent_change_7d": 4.3,
+          "percent_change_30d": 12.0,
+          "market_cap": 411900000000,
+          "market_cap_dominance": 14.2,
+          "fully_diluted_market_cap": 411900000000,
+          "last_updated": "2026-09-15T07:00:00.000Z"
+        }
+      }
+    }
+  }
+}

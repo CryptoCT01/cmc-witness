@@ -1,0 +1,22 @@
+{
+  "status": {
+    "timestamp": "2026-09-15T07:00:00.000Z",
+    "error_code": 0,
+    "error_message": null,
+    "elapsed": 15,
+    "credit_count": 1
+  },
+  "data": {
+    "tokens": [
+      {
+        "name": "Wrapped Bitcoin",
+        "symbol": "WBTC",
+        "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "network": "ethereum",
+        "price_usd": 95300.0,
+        "liquidity_usd": 125000000,
+        "volume_24h_usd": 48000000
+      }
+    ]
+  }
+}

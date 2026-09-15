@@ -1,0 +1,38 @@
+{
+  "status": {
+    "timestamp": "2026-09-15T07:00:00.000Z",
+    "error_code": 0,
+    "error_message": null,
+    "elapsed": 8,
+    "credit_count": 1
+  },
+  "data": {
+    "RUG": {
+      "id": 999999,
+      "name": "RugPull Token",
+      "symbol": "RUG",
+      "slug": "rugpull-token",
+      "cmc_rank": 4800,
+      "num_market_pairs": 2,
+      "circulating_supply": 1000000000,
+      "total_supply": 100000000000,
+      "max_supply": 100000000000,
+      "last_updated": "2026-09-15T07:00:00.000Z",
+      "quote": {
+        "USD": {
+          "price": 0.000012,
+          "volume_24h": 8500,
+          "volume_change_24h": 420.0,
+          "percent_change_1h": 45.0,
+          "percent_change_24h": -62.0,
+          "percent_change_7d": 310.0,
+          "percent_change_30d": -88.0,
+          "market_cap": 12000,
+          "market_cap_dominance": 0.0,
+          "fully_diluted_market_cap": 1200000,
+          "last_updated": "2026-09-15T07:00:00.000Z"
+        }
+      }
+    }
+  }
+}
