@@ -1,30 +1,34 @@
-/** Court of Markets — Judge Console */
-
-const CIRC = 2 * Math.PI * 52;
+/** CMC Witness · Pre-trade Gate console */
 
 const els = {
+  splash: document.getElementById("splash"),
+  floor: document.getElementById("floor"),
+  enterBtn: document.getElementById("enterBtn"),
   feed: document.getElementById("feed"),
-  evidenceTimeline: document.getElementById("evidenceTimeline"),
+  evidenceBody: document.getElementById("evidenceBody"),
   reasonsList: document.getElementById("reasonsList"),
   chainTrack: document.getElementById("chainTrack"),
   chainFocus: document.getElementById("chainFocus"),
   chainScrub: document.getElementById("chainScrub"),
   chainHint: document.getElementById("chainHint"),
-  statAllow: document.getElementById("statAllow"),
-  statCaution: document.getElementById("statCaution"),
-  statBlock: document.getElementById("statBlock"),
+  kpiAllow: document.getElementById("kpiAllow"),
+  kpiCaution: document.getElementById("kpiCaution"),
+  kpiBlock: document.getElementById("kpiBlock"),
+  kpiReceipts: document.getElementById("kpiReceipts"),
+  kpiLast: document.getElementById("kpiLast"),
+  usdcNoteBox: document.getElementById("usdcNoteBox"),
   reportMeta: document.getElementById("reportMeta"),
   modePill: document.getElementById("modePill"),
+  sessMode: document.getElementById("sessMode"),
   fileInput: document.getElementById("fileInput"),
   reloadBtn: document.getElementById("reloadBtn"),
   theatreBtn: document.getElementById("theatreBtn"),
   prevBtn: document.getElementById("prevBtn"),
   nextBtn: document.getElementById("nextBtn"),
   stepper: document.getElementById("stepper"),
-  verdictPlate: document.getElementById("verdictPlate"),
+  verdictBlock: document.getElementById("verdictBlock"),
   verdictWord: document.getElementById("verdictWord"),
   verdictSub: document.getElementById("verdictSub"),
-  scoreRing: document.getElementById("scoreRing"),
   scoreValue: document.getElementById("scoreValue"),
   caseIdx: document.getElementById("caseIdx"),
   caseSymbol: document.getElementById("caseSymbol"),
@@ -32,6 +36,12 @@ const els = {
   proposeBubble: document.getElementById("proposeBubble"),
   judgeBubble: document.getElementById("judgeBubble"),
   duelStage: document.getElementById("duelStage"),
+  gateForm: document.getElementById("gateForm"),
+  symInput: document.getElementById("symInput"),
+  runGateBtn: document.getElementById("runGateBtn"),
+  gateHint: document.getElementById("gateHint"),
+  clk: document.getElementById("clk"),
+  toast: document.getElementById("toast"),
 };
 
 const state = {
@@ -41,7 +51,7 @@ const state = {
   index: 0,
   theatre: false,
   theatreTimer: null,
-  scoreAnim: null,
+  liveResult: null,
 };
 
 function escapeHtml(s) {
@@ -58,62 +68,64 @@ function shortHash(h, n = 12) {
   return s.length <= n * 2 ? s : `${s.slice(0, n)}…${s.slice(-6)}`;
 }
 
-function decisionColor(d) {
-  if (d === "allow") return "var(--emerald)";
-  if (d === "caution") return "var(--amber)";
-  if (d === "block") return "var(--rose)";
-  return "var(--cyan)";
-}
-
-function tickNumber(el, to, duration = 900, animKey = "scoreAnim") {
+function tickNumber(el, to) {
   const target = Math.round(Number(to) || 0);
-  const from = Number(el.dataset.value || el.textContent || 0) || 0;
-  const start = performance.now();
-  if (state[animKey]) cancelAnimationFrame(state[animKey]);
-  // Ensure final value even if rAF is throttled (headless / virtual time)
+  el.textContent = String(target);
   el.dataset.value = String(target);
-  const step = (now) => {
-    const t = Math.min(1, (now - start) / duration);
-    const eased = 1 - Math.pow(1 - t, 3);
-    const val = Math.round(from + (target - from) * eased);
-    el.textContent = String(val);
-    if (t < 1) state[animKey] = requestAnimationFrame(step);
-    else el.textContent = String(target);
-  };
-  state[animKey] = requestAnimationFrame(step);
-  // Fallback settle
-  setTimeout(() => {
-    el.textContent = String(target);
-    el.dataset.value = String(target);
-  }, duration + 50);
 }
 
-function setScoreRing(score, decision) {
-  const clamped = Math.max(0, Math.min(100, Number(score) || 0));
-  const offset = CIRC * (1 - clamped / 100);
-  els.scoreRing.style.stroke = decisionColor(decision);
-  els.scoreRing.style.strokeDashoffset = String(offset);
-  tickNumber(els.scoreValue, clamped, 700, "scoreAnim");
+function toast(msg) {
+  els.toast.textContent = msg;
+  els.toast.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => els.toast.classList.remove("show"), 2800);
+}
+
+function enterFloor() {
+  els.splash.classList.add("go");
+  els.floor.classList.add("on");
+  try {
+    sessionStorage.setItem("cmc_witness_entered", "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+function maybeAutoEnter() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("floor") === "1" || params.get("enter") === "1" || params.get("skipSplash") === "1") {
+    enterFloor();
+    return;
+  }
+  try {
+    if (sessionStorage.getItem("cmc_witness_entered") === "1") enterFloor();
+  } catch {
+    /* ignore */
+  }
 }
 
 function evidenceForRound(round) {
-  if (Array.isArray(round.evidence) && round.evidence.length) return round.evidence;
-  const receipt = state.receiptsById.get(round.receipt_id);
+  if (Array.isArray(round?.evidence) && round.evidence.length) return round.evidence;
+  const receipt = state.receiptsById.get(round?.receipt_id);
   if (receipt?.evidence?.length) return receipt.evidence;
-  return (round.evidence_endpoints ?? []).map((endpoint) => ({ endpoint }));
+  return (round?.evidence_endpoints ?? []).map((endpoint) => ({ endpoint }));
 }
 
 function receiptForRound(round) {
-  return state.receiptsById.get(round.receipt_id) ?? null;
+  return state.receiptsById.get(round?.receipt_id) ?? null;
 }
 
 function renderSummary(report) {
   const s = report.summary ?? {};
-  tickNumber(els.statAllow, s.allow ?? 0, 700, "statAllowAnim");
-  tickNumber(els.statCaution, s.caution ?? 0, 700, "statCautionAnim");
-  tickNumber(els.statBlock, s.block ?? 0, 700, "statBlockAnim");
-  els.modePill.textContent = `MODE · ${String(report.mode ?? "?").toUpperCase()}`;
-  els.reportMeta.textContent = `${report.title ?? "Duel"} · ${report.created_at ?? ""} · ${s.total ?? 0} rounds · ${state.receipts.length} chained receipts`;
+  tickNumber(els.kpiAllow, s.allow ?? 0);
+  tickNumber(els.kpiCaution, s.caution ?? 0);
+  tickNumber(els.kpiBlock, s.block ?? 0);
+  tickNumber(els.kpiReceipts, state.receipts.length || s.total || (report.rounds ?? []).length);
+  const mode = String(report.mode ?? "fixture").toUpperCase();
+  els.modePill.innerHTML = `● <b>${escapeHtml(mode)}</b>`;
+  els.sessMode.textContent = `Mode · ${mode.toLowerCase()}`;
+  els.usdcNoteBox.hidden = mode !== "X402";
+  els.reportMeta.textContent = `${report.title ?? "Duel"} · ${report.created_at ?? ""} · ${s.total ?? (report.rounds ?? []).length} rounds · ${state.receipts.length} chained receipts`;
 }
 
 function renderStepper(report) {
@@ -143,7 +155,7 @@ function renderFeed(report) {
       <span class="idx">#${r.index ?? i + 1}</span>
       <div>
         <div class="sym">${escapeHtml(r.proposed)}</div>
-        <div class="meta">score ${r.score} · height ${r.chain_height ?? "?"}</div>
+        <div class="meta">score ${r.score} · h${r.chain_height ?? "?"}</div>
       </div>
       <span class="badge ${r.decision}">${escapeHtml(String(r.decision || "?").toUpperCase())}</span>
     `;
@@ -163,7 +175,7 @@ function renderTheatre(round, { animate } = {}) {
   els.proposeBubble.textContent = round?.reckless_line || "—";
   const dec = String(round?.decision || "—").toUpperCase();
   els.judgeBubble.innerHTML = round
-    ? `${escapeHtml(dec)} <span style="color:var(--muted);font-size:0.85rem;font-family:var(--font-mono)">· ${round.score}/100</span>`
+    ? `${escapeHtml(dec)} <span style="color:var(--fg3);font-size:0.85em">· ${round.score}/100</span>`
     : "—";
 
   const show = () => {
@@ -178,51 +190,63 @@ function renderTheatre(round, { animate } = {}) {
   else show();
 }
 
-function renderVerdict(round) {
-  if (!round) {
-    els.verdictPlate.dataset.decision = "";
-    els.verdictWord.textContent = "STANDBY";
-    els.verdictSub.textContent = "Awaiting docket";
-    setScoreRing(0, null);
-    els.caseIdx.textContent = "ROUND —";
-    els.caseSymbol.textContent = "—";
-    els.recklessLine.textContent = "Load a duel report to open the courtroom.";
-    return;
-  }
-  const d = round.decision || "";
-  els.verdictPlate.dataset.decision = d;
-  els.verdictWord.textContent = String(d || "—").toUpperCase();
-  els.verdictSub.textContent = `Market-truth judgment for ${round.proposed} · chain height ${round.chain_height ?? "—"}`;
-  setScoreRing(round.score ?? 0, d);
-  els.caseIdx.textContent = `ROUND ${round.index ?? state.index + 1}`;
-  els.caseSymbol.textContent = round.proposed;
-  els.recklessLine.textContent = round.reckless_line || "";
-}
+function applyVerdictView({
+  decision,
+  score,
+  symbol,
+  sub,
+  caseIdx,
+  recklessLine,
+  reasons,
+  evidence,
+}) {
+  const d = decision || "";
+  els.verdictBlock.dataset.decision = d;
+  els.verdictWord.textContent = d ? String(d).toUpperCase() : "STANDBY";
+  els.verdictSub.textContent = sub || "Awaiting symbol or duel round";
+  els.scoreValue.textContent = score == null || score === "" ? "—" : String(score);
+  els.caseSymbol.textContent = symbol || "—";
+  els.caseIdx.textContent = caseIdx || "ROUND —";
+  els.recklessLine.textContent = recklessLine || "Load a duel report or run the gate.";
+  els.kpiLast.textContent = d ? String(d).toUpperCase() : "—";
+  els.kpiLast.style.color =
+    d === "allow" ? "var(--green)" : d === "caution" ? "var(--amber)" : d === "block" ? "var(--red)" : "var(--cyan)";
 
-function renderEvidence(round) {
-  const rows = evidenceForRound(round || {});
+  const rs = reasons ?? [];
+  els.reasonsList.innerHTML = rs.map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+
+  const rows = evidence ?? [];
   if (!rows.length) {
-    els.evidenceTimeline.innerHTML = `<div class="empty-note">No endpoint evidence on this round.</div>`;
+    els.evidenceBody.innerHTML = `<tr><td colspan="4" class="empty">No evidence yet.</td></tr>`;
   } else {
-    els.evidenceTimeline.innerHTML = rows
+    els.evidenceBody.innerHTML = rows
       .map(
-        (e) => `
-      <article class="ev-card">
-        <div class="ev-path">${escapeHtml(e.endpoint)}</div>
-        <div class="ev-meta">
-          <span>credits <strong>${escapeHtml(e.credit_count ?? "—")}</strong></span>
-          <span>ts <strong>${escapeHtml(e.status_timestamp ?? "—")}</strong></span>
-        </div>
-        ${e.used_for ? `<div class="ev-used">${escapeHtml(e.used_for)}</div>` : ""}
-      </article>`,
+        (e) => `<tr>
+        <td>${escapeHtml(e.endpoint)}</td>
+        <td>${escapeHtml(e.credit_count ?? "—")}</td>
+        <td>${escapeHtml(e.status_timestamp ?? "—")}</td>
+        <td style="font-family:var(--ui);color:var(--fg2)">${escapeHtml(e.used_for ?? "—")}</td>
+      </tr>`,
       )
       .join("");
   }
+}
 
-  const reasons = round?.reasons ?? [];
-  els.reasonsList.innerHTML = reasons.length
-    ? `<h4>Opinion of the Court</h4><ul>${reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`
-    : "";
+function renderVerdict(round) {
+  if (!round) {
+    applyVerdictView({});
+    return;
+  }
+  applyVerdictView({
+    decision: round.decision,
+    score: round.score ?? 0,
+    symbol: round.proposed,
+    sub: `Pre-trade gate for ${round.proposed} · chain height ${round.chain_height ?? "—"}`,
+    caseIdx: `ROUND ${round.index ?? state.index + 1}`,
+    recklessLine: round.reckless_line || "",
+    reasons: round.reasons ?? [],
+    evidence: evidenceForRound(round),
+  });
 }
 
 function chainRowsFromReport(report) {
@@ -237,7 +261,7 @@ function chainRowsFromReport(report) {
       chain_height: r.chain_height ?? i,
       observed_hash: r.observed_hash,
       receipt_hash: r.receipt_hash ?? receipt?.receipt_hash,
-      prev_hash: r.prev_hash ?? receipt?.prev_hash ?? (i === 0 ? null : null),
+      prev_hash: r.prev_hash ?? receipt?.prev_hash ?? null,
       receipt_id: r.receipt_id,
     };
   });
@@ -284,11 +308,11 @@ function updateChainFocus(node) {
   const prev = node.prev_hash == null ? "null (genesis)" : node.prev_hash;
   const rh = node.receipt_hash ?? "—";
   els.chainFocus.innerHTML = `
-    <strong style="color:var(--text)">${escapeHtml(node.symbol)}</strong>
+    <strong>${escapeHtml(node.symbol)}</strong>
     · height ${escapeHtml(node.chain_height)}
     · ${escapeHtml(String(node.decision || "").toUpperCase())} (${escapeHtml(node.score)})
     <br/>prev_hash <span style="color:var(--cyan)">${escapeHtml(prev)}</span>
-    <br/>receipt_hash <span style="color:var(--magenta)">${escapeHtml(rh)}</span>
+    <br/>receipt_hash <span style="color:var(--gold)">${escapeHtml(rh)}</span>
     <br/>observed_hash ${escapeHtml(node.observed_hash || "—")}
   `;
 }
@@ -296,18 +320,17 @@ function updateChainFocus(node) {
 function selectRound(i, { animate = false } = {}) {
   const report = state.report;
   if (!report?.rounds?.length) return;
+  state.liveResult = null;
   state.index = Math.max(0, Math.min(report.rounds.length - 1, i));
   const round = report.rounds[state.index];
   renderVerdict(round);
   renderTheatre(round, { animate });
-  renderEvidence(round);
   renderFeed(report);
   renderStepper(report);
   renderChain(report);
   els.chainScrub.value = String(state.index);
   const active = els.chainTrack.querySelector(".chain-node.active");
-  if (active && typeof active.scrollIntoView === "function") {
-    // Keep page scroll anchored on the hero; only nudge the horizontal track.
+  if (active) {
     const track = els.chainTrack;
     const left = active.offsetLeft - (track.clientWidth - active.clientWidth) / 2;
     track.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
@@ -346,7 +369,7 @@ function loadReport(report) {
   stopTheatre();
   state.report = report;
   state.index = 0;
-  // Prefer joining evidence from receipts when report lacks detail
+  state.liveResult = null;
   for (const r of report.rounds ?? []) {
     if ((!r.evidence || !r.evidence.length) && state.receiptsById.has(r.receipt_id)) {
       const rec = state.receiptsById.get(r.receipt_id);
@@ -354,6 +377,16 @@ function loadReport(report) {
       r.prev_hash = r.prev_hash ?? rec.prev_hash;
       r.receipt_hash = r.receipt_hash ?? rec.receipt_hash;
     }
+  }
+  // Derive summary if missing
+  if (!report.summary && report.rounds) {
+    const summary = { allow: 0, caution: 0, block: 0, total: report.rounds.length };
+    for (const r of report.rounds) {
+      if (r.decision === "allow") summary.allow++;
+      else if (r.decision === "caution") summary.caution++;
+      else if (r.decision === "block") summary.block++;
+    }
+    report.summary = summary;
   }
   renderSummary(report);
   selectRound(0, { animate: true });
@@ -393,11 +426,76 @@ async function tryFetchDefault() {
   renderVerdict(null);
 }
 
+async function runLiveGate(symbol) {
+  const sym = String(symbol || "").trim();
+  if (!sym) {
+    toast("Enter a symbol or contract");
+    return;
+  }
+  els.runGateBtn.disabled = true;
+  els.gateHint.textContent = `Running gate for ${sym}…`;
+  try {
+    const data = await fetchJson(`/api/check?symbol=${encodeURIComponent(sym)}`);
+    state.liveResult = data;
+    const decision = data.decision;
+    const receipt = data.receipt ?? {};
+    applyVerdictView({
+      decision,
+      score: data.score,
+      symbol: receipt.symbol || sym,
+      sub: `Live gate · mode ${data.mode ?? receipt.auth_mode ?? "?"} · height ${receipt.chain_height ?? "—"}`,
+      caseIdx: "LIVE CHECK",
+      recklessLine: `Agent proposed ${sym} — Witness scored from CMC evidence.`,
+      reasons: data.reasons ?? [],
+      evidence: receipt.evidence ?? [],
+    });
+    if (data.mode) {
+      const mode = String(data.mode).toUpperCase();
+      els.modePill.innerHTML = `● <b>${escapeHtml(mode)}</b>`;
+      els.sessMode.textContent = `Mode · ${mode.toLowerCase()}`;
+      els.usdcNoteBox.hidden = mode !== "X402";
+    }
+    await loadReceipts();
+    tickNumber(els.kpiReceipts, state.receipts.length);
+    toast(`${String(decision).toUpperCase()} · ${sym} · score ${data.score}`);
+    els.gateHint.innerHTML = `Live result from <code>/api/check</code>. Also: <code>pnpm witness check ${escapeHtml(sym)} --fixture</code>`;
+  } catch (err) {
+    // Fall back: try matching duel round by symbol
+    const rounds = state.report?.rounds ?? [];
+    const idx = rounds.findIndex((r) => String(r.proposed).toUpperCase() === sym.toUpperCase());
+    if (idx >= 0) {
+      selectRound(idx, { animate: true });
+      toast(`No live API — showing duel round for ${sym}`);
+      els.gateHint.innerHTML = `Live <code>/api/check</code> unavailable. Showing fixture duel. CLI: <code>pnpm witness check ${escapeHtml(sym)} --fixture</code>`;
+    } else {
+      toast(`Gate unavailable — use CLI: pnpm witness check ${sym} --fixture`);
+      els.gateHint.innerHTML = `Could not reach <code>/api/check</code> (${escapeHtml(err.message)}). Run <code>pnpm witness check ${escapeHtml(sym)} --fixture</code> then reload receipts.`;
+    }
+  } finally {
+    els.runGateBtn.disabled = false;
+  }
+}
+
+/* Help toggles */
+document.querySelectorAll(".help-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const id = btn.getAttribute("data-help");
+    const card = document.getElementById(id);
+    if (!card) return;
+    const open = card.hasAttribute("hidden");
+    card.toggleAttribute("hidden", !open);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+});
+
+els.enterBtn.addEventListener("click", enterFloor);
+
 els.fileInput.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
   const text = await file.text();
   loadReport(JSON.parse(text));
+  toast(`Loaded ${file.name}`);
 });
 
 els.reloadBtn.addEventListener("click", () => tryFetchDefault());
@@ -411,7 +509,13 @@ els.chainScrub.addEventListener("input", () => {
   selectRound(Number(els.chainScrub.value), { animate: false });
 });
 
+els.gateForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  runLiveGate(els.symInput.value);
+});
+
 document.addEventListener("keydown", (e) => {
+  if (e.target === els.symInput) return;
   if (e.key === "ArrowRight") selectRound(state.index + 1, { animate: true });
   if (e.key === "ArrowLeft") selectRound(state.index - 1, { animate: true });
   if (e.key === " ") {
@@ -421,11 +525,15 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Init ring geometry
-els.scoreRing.style.strokeDasharray = String(CIRC);
-els.scoreRing.style.strokeDashoffset = String(CIRC);
+function tickClock() {
+  const d = new Date();
+  els.clk.textContent = d.toISOString().slice(11, 19);
+}
+tickClock();
+setInterval(tickClock, 1000);
 
 async function boot() {
+  maybeAutoEnter();
   await tryFetchDefault();
   const params = new URLSearchParams(location.search);
   const q = params.get("round");

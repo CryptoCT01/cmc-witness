@@ -3,138 +3,300 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Court of Markets — Judge Console</title>
-  <meta name="description" content="CMC Witness Judge Console — cinematic courtroom for market-truth judgments." />
+  <title>CMC Witness · Pre-trade Gate</title>
+  <meta name="description" content="CMC Witness — pre-trade referee for AI agents. ALLOW / CAUTION / BLOCK from CoinMarketCap data with tamper-evident Market Receipts." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="atmosphere" aria-hidden="true">
-    <div class="mesh mesh-a"></div>
-    <div class="mesh mesh-b"></div>
-    <div class="grain"></div>
-    <div class="vignette"></div>
+  <div class="hud tl" aria-hidden="true"></div>
+  <div class="hud tr" aria-hidden="true"></div>
+  <div class="hud bl" aria-hidden="true"></div>
+  <div class="hud br" aria-hidden="true"></div>
+
+  <!-- ===== SPLASH ===== -->
+  <div id="splash">
+    <div class="xbeams" aria-hidden="true"><div class="b b1"></div><div class="b b2"></div></div>
+    <div class="splash-kicker">Build with CMC · AI Agents &amp; Automation · #BuildwithCMC</div>
+    <svg class="splash-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+      <circle cx="36" cy="36" r="34" stroke="rgba(255,255,255,.08)"/>
+      <circle cx="36" cy="36" r="22" stroke="rgba(232,184,74,.28)"/>
+      <path d="M22 38 L32 48 L52 24" stroke="#3ee8f0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <rect x="18" y="18" width="36" height="36" rx="8" stroke="#e8b84a" stroke-width="1.4" fill="none" opacity=".55"/>
+    </svg>
+    <div class="splash-title"><span>CMC Witness</span></div>
+    <p class="splash-brand">Pre-trade Gate</p>
+    <p class="splash-sub">
+      Free sites already show BTC’s price. <b>Witness is a pre-trade referee</b>: other agents must clear
+      <code>before_you_trade</code> before sizing. It returns <b>ALLOW / CAUTION / BLOCK</b> from CoinMarketCap data,
+      writes a tamper-evident <b>Market Receipt</b>, and can pay CMC via <b>x402 USDC</b> for that gate pipeline —
+      not for “buying the BTC number.”
+    </p>
+    <div class="splash-pills">
+      <span class="sp g">MCP</span>
+      <span class="sp c">x402</span>
+      <span class="sp g">Market Receipts</span>
+      <span class="sp c">Pre-trade gate</span>
+    </div>
+    <button class="enter" id="enterBtn" type="button">Enter the gate</button>
+    <div class="splash-trust">Catches ticker collisions · low-liq / rug-like tokens · never invents metrics</div>
   </div>
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="seal" aria-hidden="true">
-        <span class="seal-ring"></span>
-        <span class="seal-mark">⚖</span>
-      </div>
-      <div class="brand-copy">
-        <p class="eyebrow">CMC Witness · Market Receipt v2</p>
-        <h1>Court of Markets</h1>
-        <p class="tagline">Judge Console · Reckless Agent vs Witness · #BuildwithCMC</p>
-      </div>
+  <!-- ===== FLOOR ===== -->
+  <div id="floor">
+    <div class="mock-banner">
+      <span class="dot"></span>
+      DEMO / FIXTURE READY — duel report + receipt chain · live CLI: <code>pnpm witness check BTC --fixture</code>
     </div>
-    <div class="top-meta">
-      <div class="pill" id="modePill">MODE · —</div>
-      <div class="pill live"><span class="pulse"></span> LIVE DOCKET</div>
-      <div class="toolbar">
-        <label class="btn ghost">
+
+    <div class="info-strip" id="infoStrip">
+      You’re not paying for BTC’s price — you’re paying for a <b>gate</b> + <b>CMC API evidence</b> + a <b>receipt</b> other bots can require.
+    </div>
+
+    <header class="top">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect x="3" y="3" width="22" height="22" rx="5" stroke="#e8b84a" stroke-width="1.2" opacity=".7"/>
+          <path d="M8 15 L12 19 L20 10" stroke="#3ee8f0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <h1><i>CMC Witness</i></h1>
+          <small>Pre-trade Gate · Court of Markets</small>
+        </div>
+      </div>
+      <div class="mode-pill" id="modePill">● <b>FIXTURE</b></div>
+      <div class="hero-stats">
+        <div class="hs gold"><div class="hs-l">Receipts chained</div><div class="hs-v" id="kpiReceipts">0</div></div>
+        <div class="hs pnl-up"><div class="hs-l">Allows</div><div class="hs-v" id="kpiAllow">0</div></div>
+        <div class="hs" style="border-color:rgba(240,160,48,.28)"><div class="hs-l">Cautions</div><div class="hs-v" id="kpiCaution" style="color:var(--amber)">0</div></div>
+        <div class="hs pnl-dn"><div class="hs-l">Blocks</div><div class="hs-v" id="kpiBlock">0</div></div>
+        <div class="hs cyan"><div class="hs-l">Last decision</div><div class="hs-v" id="kpiLast">—</div></div>
+        <div class="hs" id="usdcNoteBox" hidden><div class="hs-l">x402 USDC</div><div class="hs-v" id="kpiUsdc" style="color:var(--gold);font-size:11px">pay CMC API</div></div>
+        <div class="clock-box">
+          <div class="t" id="clk">00:00:00</div>
+          <div class="z">UTC · gate HUD</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="sess">
+      <span class="sess-chip gold" id="sessMode">Mode · fixture</span>
+      <span class="sess-chip cyan">MCP · before_you_trade</span>
+      <span class="sess-chip on">Receipt chain · live</span>
+      <span class="sess-chip">Ticker collision check</span>
+      <span class="sess-chip shock" id="sessHint">Not a price widget</span>
+      <div class="toolbar-inline">
+        <label class="act-mini">
           Load report
           <input type="file" id="fileInput" accept="application/json,.json" hidden />
         </label>
-        <button class="btn ghost" id="reloadBtn" type="button">Reload</button>
-        <button class="btn primary" id="theatreBtn" type="button">▶ Theatre</button>
-      </div>
-    </div>
-  </header>
-
-  <section class="hero" id="hero">
-    <div class="hero-left">
-      <div class="verdict-plate" id="verdictPlate" data-decision="—">
-        <div class="verdict-glow"></div>
-        <p class="verdict-kicker">LIVE VERDICT</p>
-        <h2 class="verdict-word" id="verdictWord">STANDBY</h2>
-        <p class="verdict-sub" id="verdictSub">Awaiting docket</p>
-      </div>
-      <div class="score-stage">
-        <svg class="score-ring" viewBox="0 0 120 120" aria-hidden="true">
-          <circle class="ring-track" cx="60" cy="60" r="52" />
-          <circle class="ring-progress" id="scoreRing" cx="60" cy="60" r="52" />
-        </svg>
-        <div class="score-center">
-          <span class="score-value" id="scoreValue">0</span>
-          <span class="score-label">SCORE</span>
-        </div>
+        <button class="act-mini" id="reloadBtn" type="button">Reload</button>
+        <button class="act-mini gold" id="theatreBtn" type="button">▶ Theatre</button>
       </div>
     </div>
 
-    <div class="hero-right">
-      <div class="case-card">
-        <div class="case-head">
-          <span class="case-idx" id="caseIdx">ROUND —</span>
-          <span class="case-symbol" id="caseSymbol">—</span>
+    <section class="triad">
+      <!-- LEFT: Live gate -->
+      <article class="panel us">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">Live check</div>
+              <div class="ph-s">Symbol / contract → Run gate</div>
+            </div>
+          </div>
+          <button class="help-btn" type="button" data-help="help-gate" aria-expanded="false">?</button>
         </div>
-        <p class="reckless" id="recklessLine">Load a duel report to open the courtroom.</p>
-        <div class="stat-row" id="summaryStats">
-          <div class="stat allow"><span class="n" id="statAllow">0</span><span class="l">ALLOW</span></div>
-          <div class="stat caution"><span class="n" id="statCaution">0</span><span class="l">CAUTION</span></div>
-          <div class="stat block"><span class="n" id="statBlock">0</span><span class="l">BLOCK</span></div>
+        <div class="help-card" id="help-gate" hidden>
+          Type a ticker (BTC) or contract. The gate scores CMC evidence and returns ALLOW / CAUTION / BLOCK — the same call other bots must clear before sizing.
         </div>
-        <p class="report-meta" id="reportMeta">Offline fixture ready · pnpm witness duel --fixture</p>
-      </div>
+        <div class="panel-body gate-body">
+          <form class="gate-form" id="gateForm">
+            <label class="gf-lab" for="symInput">Symbol or contract</label>
+            <div class="gf-row">
+              <input id="symInput" name="symbol" type="text" placeholder="BTC · ETH · RUG · 0x…" autocomplete="off" spellcheck="false" />
+              <button class="run-btn" type="submit" id="runGateBtn">Run gate</button>
+            </div>
+            <p class="gf-hint" id="gateHint">Demo uses duel / fixture data. Live: <code>pnpm witness check SYMBOL --fixture</code> or hit <code>/api/check?symbol=</code> when the console server is up.</p>
+          </form>
 
-      <div class="theatre-controls">
-        <button class="btn ghost" id="prevBtn" type="button">← Prev</button>
-        <div class="stepper" id="stepper"></div>
-        <button class="btn ghost" id="nextBtn" type="button">Next →</button>
-      </div>
-    </div>
-  </section>
+          <div class="verdict-block" id="verdictBlock" data-decision="">
+            <div class="vb-top">
+              <div>
+                <div class="vb-kicker">Gate verdict</div>
+                <div class="vb-word" id="verdictWord">STANDBY</div>
+                <div class="vb-sub" id="verdictSub">Awaiting symbol or duel round</div>
+              </div>
+              <div class="score-pill">
+                <div class="sp-n" id="scoreValue">—</div>
+                <div class="sp-l">score</div>
+              </div>
+            </div>
+            <div class="vb-sym" id="caseSymbol">—</div>
+          </div>
 
-  <main class="stage">
-    <section class="panel duel-panel">
-      <div class="panel-head">
-        <h3>Duel Theatre</h3>
-        <span class="hint">Step proposals vs judgments</span>
-      </div>
-      <div class="duel-stage" id="duelStage">
-        <div class="actor reckless-actor">
-          <p class="actor-label">Reckless Agent</p>
-          <div class="bubble" id="proposeBubble">—</div>
+          <div class="reasons-wrap">
+            <div class="rw-h">Reasons <span class="rw-sub">from CMC-observed fields only</span></div>
+            <ul class="reasons" id="reasonsList"></ul>
+          </div>
         </div>
-        <div class="vs-chip">VS</div>
-        <div class="actor witness-actor">
-          <p class="actor-label">Witness</p>
-          <div class="bubble judgment" id="judgeBubble">—</div>
+      </article>
+
+      <!-- CENTER: Verdict focus + dossier -->
+      <article class="panel core">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot ok"></span>
+            <div>
+              <div class="ph-t" style="color:#e8edf4">Dossier evidence</div>
+              <div class="ph-s">Endpoint · credits · why used</div>
+            </div>
+          </div>
+          <button class="help-btn" type="button" data-help="help-dossier" aria-expanded="false">?</button>
         </div>
-      </div>
-      <div class="feed" id="feed"></div>
+        <div class="help-card" id="help-dossier" hidden>
+          Each row is a real CMC API call on the receipt — quotes, listings, optional DEX search. Credits and timestamps prove what the gate saw; Witness never invents RSI or fear/greed.
+        </div>
+        <div class="panel-body dossier-body">
+          <div class="case-strip">
+            <span class="cs-idx" id="caseIdx">ROUND —</span>
+            <span class="cs-line" id="recklessLine">Load a duel report or run the gate.</span>
+          </div>
+          <div class="ev-table-wrap">
+            <table class="ev-table" id="evidenceTable">
+              <thead>
+                <tr>
+                  <th>Endpoint</th>
+                  <th>Credits</th>
+                  <th>Timestamp</th>
+                  <th>Why used</th>
+                </tr>
+              </thead>
+              <tbody id="evidenceBody">
+                <tr><td colspan="4" class="empty">No evidence yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="product-blurb">
+            <b>What this product is.</b> Other agents/bots clear <code>before_you_trade</code> before sizing.
+            Witness returns ALLOW / CAUTION / BLOCK, chains a Market Receipt, and can pay CMC via x402 USDC
+            for Pro market data + the gate pipeline — catching ticker collisions and low-liq / rug-like tokens.
+          </div>
+        </div>
+      </article>
+
+      <!-- RIGHT: quick stats / CLI -->
+      <article class="panel cr">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot c"></span>
+            <div>
+              <div class="ph-t">How to run live</div>
+              <div class="ph-s">CLI · MCP · x402</div>
+            </div>
+          </div>
+          <button class="help-btn" type="button" data-help="help-live" aria-expanded="false">?</button>
+        </div>
+        <div class="help-card" id="help-live" hidden>
+          This HUD replays the fixture duel by default. For a real CMC path, set an API key or x402 wallet and run the CLI / MCP tools — same gate, same receipt chain.
+        </div>
+        <div class="panel-body live-body">
+          <div class="cli-block">
+            <div class="cli-h">Offline (fixture)</div>
+            <pre class="cli">pnpm witness duel --fixture
+pnpm witness check BTC --fixture
+pnpm witness chain
+pnpm console</pre>
+          </div>
+          <div class="cli-block">
+            <div class="cli-h">Pay CMC (x402 USDC)</div>
+            <pre class="cli">pnpm witness check ETH --x402
+# pays for Pro CMC access + gate
+# NOT “buying the BTC number”</pre>
+          </div>
+          <div class="cli-block">
+            <div class="cli-h">Agents (MCP)</div>
+            <pre class="cli">pnpm mcp
+# tools: before_you_trade
+#         investigate</pre>
+          </div>
+          <div class="meta-line" id="reportMeta">Offline fixture ready</div>
+        </div>
+      </article>
     </section>
 
-    <section class="panel dossier-panel">
-      <div class="panel-head">
-        <h3>Dossier Evidence</h3>
-        <span class="hint">CMC endpoints · credits · timestamps</span>
-      </div>
-      <div class="timeline" id="evidenceTimeline"></div>
-      <div class="reasons" id="reasonsList"></div>
+    <section class="lower">
+      <article class="panel cinema">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot ok"></span>
+            <div>
+              <div class="ph-t" style="color:#e8edf4">Receipt chain</div>
+              <div class="ph-s" id="chainHint">prev_hash trail · scrub to inspect</div>
+            </div>
+          </div>
+          <button class="help-btn" type="button" data-help="help-chain" aria-expanded="false">?</button>
+        </div>
+        <div class="help-card" id="help-chain" hidden>
+          Every gate call appends a Market Receipt linked by prev_hash. Scrub the timeline to prove what CMC said at that height — tamper-evident for other bots and judges.
+        </div>
+        <div class="panel-body chain-body">
+          <div class="chain-scrub">
+            <input type="range" id="chainScrub" min="0" max="0" value="0" />
+            <div class="chain-focus" id="chainFocus">No chain data.</div>
+          </div>
+          <div class="chain-track" id="chainTrack"></div>
+        </div>
+      </article>
+
+      <article class="panel duel-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot" style="background:#ff5d6c;box-shadow:0 0 8px #ff5d6c"></span>
+            <div>
+              <div class="ph-t" style="color:#ff8a94">Duel theatre</div>
+              <div class="ph-s">Reckless Agent vs Witness</div>
+            </div>
+          </div>
+          <div class="ph-acts">
+            <button class="act-mini" id="prevBtn" type="button">←</button>
+            <button class="act-mini" id="nextBtn" type="button">→</button>
+            <button class="help-btn" type="button" data-help="help-duel" aria-expanded="false">?</button>
+          </div>
+        </div>
+        <div class="help-card" id="help-duel" hidden>
+          Scripted reckless proposals hit the same gate. Step through rounds or press Theatre — Witness ALLOW/CAUTION/BLOCK is what a sizing bot would receive.
+        </div>
+        <div class="panel-body duel-body">
+          <div class="duel-stage" id="duelStage">
+            <div class="actor reckless-actor">
+              <p class="actor-label">Reckless Agent</p>
+              <div class="bubble" id="proposeBubble">—</div>
+            </div>
+            <div class="vs-chip">VS</div>
+            <div class="actor witness-actor">
+              <p class="actor-label">Witness</p>
+              <div class="bubble judgment" id="judgeBubble">—</div>
+            </div>
+          </div>
+          <div class="stepper" id="stepper"></div>
+          <div class="feed" id="feed"></div>
+        </div>
+      </article>
     </section>
 
-    <section class="panel chain-panel full">
-      <div class="panel-head">
-        <h3>Receipt Chain</h3>
-        <span class="hint" id="chainHint">prev_hash trail · scrub to inspect</span>
-      </div>
-      <div class="chain-scrub">
-        <input type="range" id="chainScrub" min="0" max="0" value="0" />
-        <div class="chain-focus" id="chainFocus"></div>
-      </div>
-      <div class="chain-track" id="chainTrack"></div>
-    </section>
-  </main>
+    <footer class="foot">
+      <span class="fc hash">CMC Witness · Pre-trade Gate</span>
+      <span class="fc">Never invents metrics</span>
+      <span class="fc ag">x402 / API key / fixture</span>
+      <span class="fc">#BuildwithCMC</span>
+    </footer>
+  </div>
 
-  <footer class="foot">
-    <span>Never invents metrics · Observed CMC data only · x402 / API key / fixture</span>
-    <span>AI Agents & Automation · Build with CMC Hackathon</span>
-  </footer>
-
+  <div id="toast" role="status"></div>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
