@@ -8,7 +8,9 @@ import { CMC_BASE_URL, KEY_ENDPOINTS, MARKET_FLOOR_ENDPOINTS } from "./endpoints
 
 loadEnv();
 
-const CACHE_TTL_MS = 55_000;
+const CACHE_TTL_MS = 60_000;
+const BTC_ID = 1;
+const ETH_ID = 1027;
 
 export interface MarketFloorCoin {
   id?: number;
@@ -21,6 +23,8 @@ export interface MarketFloorCoin {
   percent_change_1h?: number | null;
   volume_24h?: number | null;
   market_cap?: number | null;
+  logo?: string | null;
+  tags?: string[];
 }
 
 export interface MarketFloorCategory {
@@ -33,6 +37,33 @@ export interface MarketFloorCategory {
   volume?: number | null;
   volume_change?: number | null;
   avg_price_change?: number | null;
+}
+
+export interface SparkPoint {
+  t: string | null;
+  v: number;
+}
+
+export interface CycleStats {
+  id: number;
+  symbol: string;
+  name: string;
+  high: number | null;
+  high_timestamp: string | null;
+  low: number | null;
+  low_timestamp: string | null;
+  close: number | null;
+  percent_change: number | null;
+}
+
+export interface AirdropRow {
+  id: string;
+  status: string;
+  project_name: string;
+  coin_symbol: string | null;
+  coin_name: string | null;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 export interface MarketFloorPayload {
@@ -53,6 +84,7 @@ export interface MarketFloorPayload {
     classification: string | null;
     update_time: string | null;
   };
+  fear_greed_history: SparkPoint[];
   altcoin_season: {
     index: number | null;
     marketcap: number | null;
@@ -60,6 +92,13 @@ export interface MarketFloorPayload {
     yearly_high: number | null;
     yearly_low: number | null;
   };
+  altcoin_season_history: SparkPoint[];
+  global_mcap_history: SparkPoint[];
+  btc_ohlcv: SparkPoint[];
+  eth_ohlcv: SparkPoint[];
+  top_market_cap: MarketFloorCoin[];
+  cycle_stats: CycleStats[];
+  airdrops: AirdropRow[];
   gainers: MarketFloorCoin[];
   losers: MarketFloorCoin[];
   trending: MarketFloorCoin[];
@@ -150,6 +189,15 @@ function parseGainersLosers(data: unknown): { gainers: MarketFloorCoin[]; losers
   return { gainers: [], losers: [] };
 }
 
+function sparkSeries(n: number, base: number, wobble: number): SparkPoint[] {
+  const out: SparkPoint[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = new Date(Date.now() - (n - 1 - i) * 86_400_000).toISOString();
+    out.push({ t, v: base + Math.sin(i / 2.2) * wobble + (i % 3) * (wobble / 8) });
+  }
+  return out;
+}
+
 function mockFloor(): MarketFloorPayload {
   return {
     mock: true,
@@ -165,6 +213,7 @@ function mockFloor(): MarketFloorPayload {
       active_cryptocurrencies: 12000,
     },
     fear_greed: { value: 55, classification: "Neutral", update_time: null },
+    fear_greed_history: sparkSeries(14, 52, 12).map((p, i) => ({ ...p, v: Math.round(40 + i * 1.2) })),
     altcoin_season: {
       index: 42,
       marketcap: 1.1e12,
@@ -172,22 +221,113 @@ function mockFloor(): MarketFloorPayload {
       yearly_high: 78,
       yearly_low: 14,
     },
+    altcoin_season_history: sparkSeries(7, 40, 6),
+    global_mcap_history: sparkSeries(14, 2.45e12, 4e10),
+    btc_ohlcv: sparkSeries(30, 65000, 1800),
+    eth_ohlcv: sparkSeries(30, 3400, 120),
+    top_market_cap: [
+      {
+        id: 1,
+        name: "Bitcoin",
+        symbol: "BTC",
+        cmc_rank: 1,
+        price_usd: 65000,
+        percent_change_24h: 1.2,
+        market_cap: 1.28e12,
+        logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png",
+        tags: ["mineable", "store-of-value"],
+      },
+      {
+        id: 1027,
+        name: "Ethereum",
+        symbol: "ETH",
+        cmc_rank: 2,
+        price_usd: 3400,
+        percent_change_24h: 0.8,
+        market_cap: 4.1e11,
+        logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png",
+        tags: ["pos", "smart-contracts"],
+      },
+    ],
+    cycle_stats: [
+      {
+        id: 1,
+        symbol: "BTC",
+        name: "Bitcoin",
+        high: 126000,
+        high_timestamp: "2025-10-06T00:00:00.000Z",
+        low: 0.05,
+        low_timestamp: "2010-07-14T00:00:00.000Z",
+        close: 65000,
+        percent_change: null,
+      },
+      {
+        id: 1027,
+        symbol: "ETH",
+        name: "Ethereum",
+        high: 4900,
+        high_timestamp: "2021-11-10T00:00:00.000Z",
+        low: 0.4,
+        low_timestamp: "2015-10-20T00:00:00.000Z",
+        close: 3400,
+        percent_change: null,
+      },
+    ],
+    airdrops: [],
     gainers: [
-      { name: "Mock Gainer", symbol: "MOCKG", percent_change_24h: 42.5, price_usd: 1.23 },
-      { name: "Mock Alpha", symbol: "MOCKA", percent_change_24h: 18.2, price_usd: 0.45 },
+      {
+        id: 9991,
+        name: "Mock Gainer",
+        symbol: "MOCKG",
+        percent_change_24h: 42.5,
+        price_usd: 1.23,
+        logo: null,
+      },
+      {
+        id: 9992,
+        name: "Mock Alpha",
+        symbol: "MOCKA",
+        percent_change_24h: 18.2,
+        price_usd: 0.45,
+        logo: null,
+      },
     ],
     losers: [
-      { name: "Mock Loser", symbol: "MOCKL", percent_change_24h: -22.1, price_usd: 0.08 },
-      { name: "Mock Drag", symbol: "MOCKD", percent_change_24h: -11.4, price_usd: 2.1 },
+      {
+        id: 9993,
+        name: "Mock Loser",
+        symbol: "MOCKL",
+        percent_change_24h: -22.1,
+        price_usd: 0.08,
+        logo: null,
+      },
+      {
+        id: 9994,
+        name: "Mock Drag",
+        symbol: "MOCKD",
+        percent_change_24h: -11.4,
+        price_usd: 2.1,
+        logo: null,
+      },
     ],
-    trending: [{ name: "Mock Trend", symbol: "MOCKT", percent_change_24h: 5.1, price_usd: 10 }],
-    most_visited: [{ name: "Bitcoin", symbol: "BTC", percent_change_24h: 1.2, price_usd: 65000 }],
-    new_listings: [{ name: "Mock New", symbol: "MOCKN", percent_change_24h: 8.0, price_usd: 0.01 }],
+    trending: [{ id: 9995, name: "Mock Trend", symbol: "MOCKT", percent_change_24h: 5.1, price_usd: 10 }],
+    most_visited: [
+      {
+        id: 1,
+        name: "Bitcoin",
+        symbol: "BTC",
+        percent_change_24h: 1.2,
+        price_usd: 65000,
+        logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png",
+      },
+    ],
+    new_listings: [{ id: 9996, name: "Mock New", symbol: "MOCKN", percent_change_24h: 8.0, price_usd: 0.01 }],
     categories: [
       {
         id: "mock-defi",
         name: "DeFi",
         title: "DeFi",
+        market_cap: 8e10,
         market_cap_change: 2.4,
         avg_price_change: 1.8,
         num_tokens: 120,
@@ -215,114 +355,308 @@ async function settled<T>(
   }
 }
 
+function parseFgHistory(data: unknown): SparkPoint[] {
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((row) => {
+      const r = row as Record<string, unknown>;
+      const v = r.value != null ? Number(r.value) : NaN;
+      if (!Number.isFinite(v)) return null;
+      let t: string | null = null;
+      if (r.timestamp != null) {
+        const raw = String(r.timestamp);
+        const n = Number(raw);
+        t = Number.isFinite(n) && n > 1e9 ? new Date(n * 1000).toISOString() : raw;
+      }
+      return { t, v };
+    })
+    .filter((p): p is SparkPoint => Boolean(p))
+    .reverse(); // API returns newest-first
+}
+
+function parseGlobalMcapHistory(data: unknown): SparkPoint[] {
+  const quotes = (data as { quotes?: unknown[] } | null)?.quotes;
+  if (!Array.isArray(quotes)) return [];
+  return quotes
+    .map((row) => {
+      const r = row as { timestamp?: string; quote?: { USD?: { total_market_cap?: number } } };
+      const v = r.quote?.USD?.total_market_cap;
+      if (typeof v !== "number") return null;
+      return { t: r.timestamp ?? null, v };
+    })
+    .filter((p): p is SparkPoint => Boolean(p));
+}
+
+function parseOhlcvCloses(data: unknown): SparkPoint[] {
+  const quotes = (data as { quotes?: unknown[] } | null)?.quotes;
+  if (!Array.isArray(quotes)) return [];
+  return quotes
+    .map((row) => {
+      const r = row as {
+        time_close?: string;
+        quote?: { USD?: { close?: number; timestamp?: string } };
+      };
+      const v = r.quote?.USD?.close;
+      if (typeof v !== "number") return null;
+      return { t: r.quote?.USD?.timestamp ?? r.time_close ?? null, v };
+    })
+    .filter((p): p is SparkPoint => Boolean(p));
+}
+
+function parseAltHistory(data: unknown): SparkPoint[] {
+  const points = (data as { points?: unknown[] } | null)?.points;
+  if (!Array.isArray(points)) return [];
+  return points
+    .map((row) => {
+      const r = row as { timestamp?: string; altcoin_index?: number };
+      if (r.altcoin_index == null || !Number.isFinite(Number(r.altcoin_index))) return null;
+      return { t: r.timestamp ?? null, v: Number(r.altcoin_index) };
+    })
+    .filter((p): p is SparkPoint => Boolean(p));
+}
+
+function parseCycleStats(data: unknown): CycleStats[] {
+  if (!data || typeof data !== "object") return [];
+  const out: CycleStats[] = [];
+  for (const [idKey, entry] of Object.entries(data as Record<string, unknown>)) {
+    const asset = entry as {
+      id?: number;
+      name?: string;
+      symbol?: string;
+      periods?: Record<string, { quote?: { USD?: Record<string, unknown> } }>;
+    };
+    const usd = asset.periods?.all_time?.quote?.USD ?? {};
+    out.push({
+      id: typeof asset.id === "number" ? asset.id : Number(idKey),
+      symbol: String(asset.symbol ?? ""),
+      name: String(asset.name ?? ""),
+      high: typeof usd.high === "number" ? usd.high : null,
+      high_timestamp: usd.high_timestamp != null ? String(usd.high_timestamp) : null,
+      low: typeof usd.low === "number" ? usd.low : null,
+      low_timestamp: usd.low_timestamp != null ? String(usd.low_timestamp) : null,
+      close: typeof usd.close === "number" ? usd.close : null,
+      percent_change: typeof usd.percent_change === "number" ? usd.percent_change : null,
+    });
+  }
+  return out;
+}
+
+function parseAirdrops(data: unknown): AirdropRow[] {
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((row) => {
+      const r = row as Record<string, unknown>;
+      const status = String(r.status ?? "").toUpperCase();
+      if (status !== "ONGOING") return null;
+      const coin = (r.coin as { symbol?: string; name?: string } | undefined) ?? {};
+      return {
+        id: String(r.id ?? ""),
+        status,
+        project_name: String(r.project_name ?? r.name ?? "Airdrop"),
+        coin_symbol: coin.symbol != null ? String(coin.symbol) : null,
+        coin_name: coin.name != null ? String(coin.name) : null,
+        start_date: r.start_date != null ? String(r.start_date) : null,
+        end_date: r.end_date != null ? String(r.end_date) : null,
+      };
+    })
+    .filter((a): a is AirdropRow => Boolean(a))
+    .slice(0, 6);
+}
+
+function applyLogos(
+  coins: MarketFloorCoin[],
+  infoMap: Record<string, { logo?: string; tags?: string[] }>,
+): MarketFloorCoin[] {
+  return coins.map((c) => {
+    if (c.id == null) return c;
+    const info = infoMap[String(c.id)];
+    if (!info) return c;
+    return {
+      ...c,
+      logo: info.logo ?? c.logo ?? null,
+      tags: Array.isArray(info.tags) ? info.tags.slice(0, 6) : c.tags,
+    };
+  });
+}
+
 async function fetchLiveFloor(apiKey: string): Promise<MarketFloorPayload> {
   const http = createHttp(apiKey);
   const errors: Record<string, string> = {};
   const endpoints_used: string[] = [];
 
+  const track = <T>(path: string, p: Promise<{ data: T }>): Promise<T> =>
+    p.then((r) => {
+      endpoints_used.push(path);
+      return r.data;
+    });
+
   const [
     globalRes,
     fgRes,
+    fgHistRes,
     altRes,
+    altHistRes,
+    gmHistRes,
     glRes,
     trendRes,
     visitRes,
     newRes,
     catRes,
     losersRes,
+    topMcapRes,
+    ohlcvBtcRes,
+    ohlcvEthRes,
+    perfRes,
+    airdropsRes,
   ] = await Promise.all([
     settled(
       "global",
-      http.get(MARKET_FLOOR_ENDPOINTS.globalMetrics).then((r) => {
-        endpoints_used.push(MARKET_FLOOR_ENDPOINTS.globalMetrics);
-        return r.data;
-      }),
+      track(MARKET_FLOOR_ENDPOINTS.globalMetrics, http.get(MARKET_FLOOR_ENDPOINTS.globalMetrics)),
       errors,
     ),
     settled(
       "fear_greed",
-      http.get(MARKET_FLOOR_ENDPOINTS.fearAndGreed).then((r) => {
-        endpoints_used.push(MARKET_FLOOR_ENDPOINTS.fearAndGreed);
-        return r.data;
-      }),
+      track(MARKET_FLOOR_ENDPOINTS.fearAndGreed, http.get(MARKET_FLOOR_ENDPOINTS.fearAndGreed)),
+      errors,
+    ),
+    settled(
+      "fear_greed_hist",
+      track(
+        MARKET_FLOOR_ENDPOINTS.fearAndGreedHistorical + "?limit=14",
+        http.get(MARKET_FLOOR_ENDPOINTS.fearAndGreedHistorical, { params: { limit: 14 } }),
+      ),
       errors,
     ),
     settled(
       "altcoin_season",
-      http.get(MARKET_FLOOR_ENDPOINTS.altcoinSeason).then((r) => {
-        endpoints_used.push(MARKET_FLOOR_ENDPOINTS.altcoinSeason);
-        return r.data;
-      }),
+      track(MARKET_FLOOR_ENDPOINTS.altcoinSeason, http.get(MARKET_FLOOR_ENDPOINTS.altcoinSeason)),
+      errors,
+    ),
+    settled(
+      "altcoin_season_hist",
+      track(
+        MARKET_FLOOR_ENDPOINTS.altcoinSeasonHistorical + "?time_period=30d",
+        http.get(MARKET_FLOOR_ENDPOINTS.altcoinSeasonHistorical, {
+          params: { time_period: "30d" },
+        }),
+      ),
+      errors,
+    ),
+    settled(
+      "global_hist",
+      track(
+        MARKET_FLOOR_ENDPOINTS.globalMetricsHistorical + "?count=14&interval=daily",
+        http.get(MARKET_FLOOR_ENDPOINTS.globalMetricsHistorical, {
+          params: { count: 14, interval: "daily" },
+        }),
+      ),
       errors,
     ),
     settled(
       "gainers_losers",
-      http
-        .get(MARKET_FLOOR_ENDPOINTS.gainersLosers, {
+      track(
+        MARKET_FLOOR_ENDPOINTS.gainersLosers,
+        http.get(MARKET_FLOOR_ENDPOINTS.gainersLosers, {
           params: { limit: 8, time_period: "24h", convert: "USD" },
-        })
-        .then((r) => {
-          endpoints_used.push(MARKET_FLOOR_ENDPOINTS.gainersLosers);
-          return r.data;
         }),
+      ),
       errors,
     ),
     settled(
       "trending",
-      http
-        .get(MARKET_FLOOR_ENDPOINTS.trendingLatest, { params: { limit: 8 } })
-        .then((r) => {
-          endpoints_used.push(MARKET_FLOOR_ENDPOINTS.trendingLatest);
-          return r.data;
-        }),
+      track(
+        MARKET_FLOOR_ENDPOINTS.trendingLatest,
+        http.get(MARKET_FLOOR_ENDPOINTS.trendingLatest, { params: { limit: 8 } }),
+      ),
       errors,
     ),
     settled(
       "most_visited",
-      http
-        .get(MARKET_FLOOR_ENDPOINTS.mostVisited, { params: { limit: 8 } })
-        .then((r) => {
-          endpoints_used.push(MARKET_FLOOR_ENDPOINTS.mostVisited);
-          return r.data;
-        }),
+      track(
+        MARKET_FLOOR_ENDPOINTS.mostVisited,
+        http.get(MARKET_FLOOR_ENDPOINTS.mostVisited, { params: { limit: 8 } }),
+      ),
       errors,
     ),
     settled(
       "new_listings",
-      http
-        .get(MARKET_FLOOR_ENDPOINTS.listingsNew, { params: { limit: 8 } })
-        .then((r) => {
-          endpoints_used.push(MARKET_FLOOR_ENDPOINTS.listingsNew);
-          return r.data;
-        }),
+      track(
+        MARKET_FLOOR_ENDPOINTS.listingsNew,
+        http.get(MARKET_FLOOR_ENDPOINTS.listingsNew, { params: { limit: 8 } }),
+      ),
       errors,
     ),
     settled(
       "categories",
-      http
-        .get(MARKET_FLOOR_ENDPOINTS.categories, { params: { limit: 10 } })
-        .then((r) => {
-          endpoints_used.push(MARKET_FLOOR_ENDPOINTS.categories);
-          return r.data;
-        }),
+      track(
+        MARKET_FLOOR_ENDPOINTS.categories,
+        http.get(MARKET_FLOOR_ENDPOINTS.categories, { params: { limit: 10 } }),
+      ),
       errors,
     ),
-    // Losers: listings sorted by 24h % asc (gainers-losers often returns gainers only on this plan)
     settled(
       "losers",
-      http
-        .get(KEY_ENDPOINTS.listingsLatest, {
+      track(
+        KEY_ENDPOINTS.listingsLatest + "?sort=percent_change_24h&sort_dir=asc",
+        http.get(KEY_ENDPOINTS.listingsLatest, {
           params: {
             limit: 8,
             sort: "percent_change_24h",
             sort_dir: "asc",
             convert: "USD",
           },
-        })
-        .then((r) => {
-          endpoints_used.push(KEY_ENDPOINTS.listingsLatest + "?sort=percent_change_24h&sort_dir=asc");
-          return r.data;
         }),
+      ),
+      errors,
+    ),
+    settled(
+      "top_market_cap",
+      track(
+        MARKET_FLOOR_ENDPOINTS.listingsLatest + "?limit=12&sort=market_cap",
+        http.get(MARKET_FLOOR_ENDPOINTS.listingsLatest, {
+          params: { limit: 12, sort: "market_cap", convert: "USD" },
+        }),
+      ),
+      errors,
+    ),
+    settled(
+      "ohlcv_btc",
+      track(
+        MARKET_FLOOR_ENDPOINTS.ohlcvHistorical + "?id=1&time_period=daily&count=30",
+        http.get(MARKET_FLOOR_ENDPOINTS.ohlcvHistorical, {
+          params: { id: BTC_ID, time_period: "daily", count: 30 },
+        }),
+      ),
+      errors,
+    ),
+    settled(
+      "ohlcv_eth",
+      track(
+        MARKET_FLOOR_ENDPOINTS.ohlcvHistorical + "?id=1027&time_period=daily&count=30",
+        http.get(MARKET_FLOOR_ENDPOINTS.ohlcvHistorical, {
+          params: { id: ETH_ID, time_period: "daily", count: 30 },
+        }),
+      ),
+      errors,
+    ),
+    settled(
+      "price_performance",
+      track(
+        MARKET_FLOOR_ENDPOINTS.pricePerformance + "?id=1,1027",
+        http.get(MARKET_FLOOR_ENDPOINTS.pricePerformance, {
+          params: { id: `${BTC_ID},${ETH_ID}` },
+        }),
+      ),
+      errors,
+    ),
+    settled(
+      "airdrops",
+      track(
+        MARKET_FLOOR_ENDPOINTS.airdrops + "?status=ONGOING&limit=6",
+        http.get(MARKET_FLOOR_ENDPOINTS.airdrops, {
+          params: { status: "ONGOING", limit: 6 },
+        }),
+      ),
       errors,
     ),
   ]);
@@ -353,8 +687,72 @@ async function fetchLiveFloor(apiKey: string): Promise<MarketFloorPayload> {
       }))
     : [];
 
-  // Prefer categories with useful move signals
-  categories.sort((a, b) => Math.abs(b.avg_price_change ?? 0) - Math.abs(a.avg_price_change ?? 0));
+  // Prefer categories with largest market cap (dense board), then move magnitude
+  categories.sort((a, b) => {
+    const mc = (b.market_cap ?? 0) - (a.market_cap ?? 0);
+    if (mc !== 0) return mc;
+    return Math.abs(b.avg_price_change ?? 0) - Math.abs(a.avg_price_change ?? 0);
+  });
+
+  let gainers = parsedGl.gainers;
+  let trending = mapCoins((trendRes as { data?: unknown } | null)?.data, 8);
+  let most_visited = mapCoins((visitRes as { data?: unknown } | null)?.data, 8);
+  let new_listings = mapCoins((newRes as { data?: unknown } | null)?.data, 8);
+  let top_market_cap = mapCoins((topMcapRes as { data?: unknown } | null)?.data, 12);
+
+  const idSet = new Set<number>();
+  for (const list of [gainers, losers, trending, most_visited, new_listings, top_market_cap]) {
+    for (const c of list) {
+      if (typeof c.id === "number") idSet.add(c.id);
+    }
+  }
+  idSet.add(BTC_ID);
+  idSet.add(ETH_ID);
+  const ids = [...idSet].slice(0, 80);
+
+  let infoMap: Record<string, { logo?: string; tags?: string[] }> = {};
+  if (ids.length) {
+    const infoRes = await settled(
+      "crypto_info",
+      track(
+        MARKET_FLOOR_ENDPOINTS.cryptoInfo + `?id=${ids.join(",")}`,
+        http.get(MARKET_FLOOR_ENDPOINTS.cryptoInfo, { params: { id: ids.join(",") } }),
+      ),
+      errors,
+    );
+    const rawInfo =
+      (infoRes as { data?: Record<string, { logo?: string; tags?: string[] }> } | null)?.data ?? {};
+    infoMap = rawInfo;
+  }
+
+  gainers = applyLogos(gainers, infoMap);
+  losers = applyLogos(losers, infoMap);
+  trending = applyLogos(trending, infoMap);
+  most_visited = applyLogos(most_visited, infoMap);
+  new_listings = applyLogos(new_listings, infoMap);
+  top_market_cap = applyLogos(top_market_cap, infoMap);
+
+  const fear_greed_history = parseFgHistory(
+    (fgHistRes as { data?: unknown } | null)?.data ?? fgHistRes,
+  );
+  const altcoin_season_history = parseAltHistory(
+    (altHistRes as { data?: unknown } | null)?.data ?? altHistRes,
+  );
+  const global_mcap_history = parseGlobalMcapHistory(
+    (gmHistRes as { data?: unknown } | null)?.data ?? gmHistRes,
+  );
+  const btc_ohlcv = parseOhlcvCloses(
+    (ohlcvBtcRes as { data?: unknown } | null)?.data ?? ohlcvBtcRes,
+  );
+  const eth_ohlcv = parseOhlcvCloses(
+    (ohlcvEthRes as { data?: unknown } | null)?.data ?? ohlcvEthRes,
+  );
+  const cycle_stats = parseCycleStats(
+    (perfRes as { data?: unknown } | null)?.data ?? perfRes,
+  );
+  const airdrops = parseAirdrops(
+    (airdropsRes as { data?: unknown } | null)?.data ?? airdropsRes,
+  );
 
   return {
     mock: false,
@@ -376,6 +774,7 @@ async function fetchLiveFloor(apiKey: string): Promise<MarketFloorPayload> {
         fgData.value_classification != null ? String(fgData.value_classification) : null,
       update_time: fgData.update_time != null ? String(fgData.update_time) : null,
     },
+    fear_greed_history,
     altcoin_season: {
       index: altData.altcoin_index != null ? Number(altData.altcoin_index) : null,
       marketcap: (altData.altcoin_marketcap as number | null | undefined) ?? null,
@@ -383,11 +782,18 @@ async function fetchLiveFloor(apiKey: string): Promise<MarketFloorPayload> {
       yearly_high: (altData.yearly_high as number | null | undefined) ?? null,
       yearly_low: (altData.yearly_low as number | null | undefined) ?? null,
     },
-    gainers: parsedGl.gainers,
+    altcoin_season_history,
+    global_mcap_history,
+    btc_ohlcv,
+    eth_ohlcv,
+    top_market_cap,
+    cycle_stats,
+    airdrops,
+    gainers,
     losers,
-    trending: mapCoins((trendRes as { data?: unknown } | null)?.data, 8),
-    most_visited: mapCoins((visitRes as { data?: unknown } | null)?.data, 8),
-    new_listings: mapCoins((newRes as { data?: unknown } | null)?.data, 8),
+    trending,
+    most_visited,
+    new_listings,
     categories: categories.slice(0, 8),
     ...(Object.keys(errors).length ? { errors } : {}),
   };
@@ -395,7 +801,7 @@ async function fetchLiveFloor(apiKey: string): Promise<MarketFloorPayload> {
 
 /**
  * Aggregated market floor for the console.
- * - Live Pro data when CMC_API_KEY is set (cached ~55s)
+ * - Live Pro data when CMC_API_KEY is set (cached ~60s)
  * - 503 when key missing unless allowMock=true (labeled MOCK)
  */
 export async function getMarketFloor(opts?: {
@@ -464,9 +870,8 @@ export async function enrichCheckSymbol(symbol: string): Promise<CheckEnrichment
         params: {
           symbol: sym,
           convert: "USD",
-          time_start: Math.floor(Date.now() / 1000) - 86400 * 14,
-          time_end: Math.floor(Date.now() / 1000),
-          interval: "daily",
+          time_period: "daily",
+          count: 14,
         },
       }),
       errors,
@@ -496,29 +901,9 @@ export async function enrichCheckSymbol(symbol: string): Promise<CheckEnrichment
   let ohlcv_spark: number[] | null = null;
   const ohlcvBody = (ohlcvRes as { data?: { data?: unknown } } | null)?.data?.data
     ?? (ohlcvRes as { data?: unknown } | null)?.data;
-  let quotes: unknown[] | undefined;
-  if (ohlcvBody && typeof ohlcvBody === "object") {
-    const body = ohlcvBody as Record<string, unknown>;
-    if (Array.isArray(body.quotes)) {
-      quotes = body.quotes;
-    } else {
-      const bySym = body[sym] ?? body[Object.keys(body)[0] ?? ""];
-      if (Array.isArray(bySym)) {
-        const first = bySym[0] as { quotes?: unknown[] };
-        quotes = first?.quotes;
-      } else if (bySym && typeof bySym === "object") {
-        quotes = (bySym as { quotes?: unknown[] }).quotes;
-      }
-    }
-  }
-  if (Array.isArray(quotes) && quotes.length) {
-    ohlcv_spark = quotes
-      .map((q) => {
-        const close = (q as { quote?: { USD?: { close?: number } } })?.quote?.USD?.close;
-        return typeof close === "number" ? close : null;
-      })
-      .filter((n): n is number => n != null);
-    if (!ohlcv_spark.length) ohlcv_spark = null;
+  const points = parseOhlcvCloses(ohlcvBody);
+  if (points.length) {
+    ohlcv_spark = points.map((p) => p.v);
   }
 
   const value: CheckEnrichment = {

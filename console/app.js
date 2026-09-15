@@ -47,21 +47,36 @@ const els = {
   toast: document.getElementById("toast"),
   floorBanner: document.getElementById("floorBanner"),
   bannerText: document.getElementById("bannerText"),
-  mkMcap: document.getElementById("mkMcap"),
-  mkVol: document.getElementById("mkVol"),
-  mkBtcD: document.getElementById("mkBtcD"),
-  mkEthD: document.getElementById("mkEthD"),
+  heroMcap: document.getElementById("heroMcap"),
+  heroVol: document.getElementById("heroVol"),
+  heroBtcD: document.getElementById("heroBtcD"),
+  heroEthD: document.getElementById("heroEthD"),
   mkFgVal: document.getElementById("mkFgVal"),
   mkFgClass: document.getElementById("mkFgClass"),
+  mkFgSub: document.getElementById("mkFgSub"),
   fgRing: document.getElementById("fgRing"),
+  fgChip: document.getElementById("fgChip"),
+  fgSpark: document.getElementById("fgSpark"),
   mkAlt: document.getElementById("mkAlt"),
   mkAltSub: document.getElementById("mkAltSub"),
+  altSpark: document.getElementById("altSpark"),
+  mcapSpark: document.getElementById("mcapSpark"),
+  mcapChip: document.getElementById("mcapChip"),
+  btcSpark: document.getElementById("btcSpark"),
+  btcChip: document.getElementById("btcChip"),
+  btcCycle: document.getElementById("btcCycle"),
+  ethSpark: document.getElementById("ethSpark"),
+  ethChip: document.getElementById("ethChip"),
+  ethCycle: document.getElementById("ethCycle"),
+  topMcapBody: document.getElementById("topMcapBody"),
   gainersBody: document.getElementById("gainersBody"),
   losersBody: document.getElementById("losersBody"),
   trendingList: document.getElementById("trendingList"),
   visitedList: document.getElementById("visitedList"),
   newStrip: document.getElementById("newStrip"),
   catList: document.getElementById("catList"),
+  airRow: document.getElementById("airRow"),
+  airStrip: document.getElementById("airStrip"),
   enrichBlock: document.getElementById("enrichBlock"),
   perfGrid: document.getElementById("perfGrid"),
   sparkSvg: document.getElementById("sparkSvg"),
@@ -111,7 +126,7 @@ const HELP = {
 <p><b>ALLOW</b> — CMC evidence looks liquid / identifiable enough to proceed (still not advice).</p>
 <p><b>CAUTION</b> — thin books, odd rank, or incomplete identity — size carefully or investigate more.</p>
 <p><b>BLOCK</b> — rug-like / unresolvable / dangerous collision — do not size.</p>
-<p>Pro panels (mcap, F&amp;G, movers) are <b>market context from CMC</b>, not the gate inventing indicators.</p>`,
+<p>Pro panels (mcap, F&amp;G, movers, sparklines) are <b>market context from CMC</b>, not the gate inventing indicators.</p>`,
   },
 };
 
@@ -130,6 +145,7 @@ function shortHash(h, n = 12) {
 }
 
 function tickNumber(el, to) {
+  if (!el) return;
   const target = Math.round(Number(to) || 0);
   el.textContent = String(target);
   el.dataset.value = String(target);
@@ -167,17 +183,60 @@ function pctClass(n) {
   return Number(n) >= 0 ? "up" : "dn";
 }
 
-/* ===== Drawer / Modal ===== */
+function sparkValues(series) {
+  if (!Array.isArray(series) || !series.length) return [];
+  return series.map((p) => (typeof p === "number" ? p : Number(p?.v))).filter((n) => Number.isFinite(n));
+}
+
+function renderSpark(svg, series, { strokeUp = "#3dff9c", strokeDn = "#ff5d6c", fill = true } = {}) {
+  if (!svg) return;
+  const vals = sparkValues(series);
+  if (vals.length < 2) {
+    svg.innerHTML = "";
+    return null;
+  }
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min || 1;
+  const h = Number(svg.viewBox?.baseVal?.height || 40);
+  const w = 200;
+  const pad = 3;
+  const pts = vals
+    .map((v, i) => {
+      const x = (i / Math.max(vals.length - 1, 1)) * w;
+      const y = h - pad - ((v - min) / span) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const up = vals[vals.length - 1] >= vals[0];
+  const stroke = up ? strokeUp : strokeDn;
+  const fillCol = up ? "rgba(61,255,156,.12)" : "rgba(255,93,108,.12)";
+  svg.innerHTML = `
+    <polyline fill="none" stroke="${stroke}" stroke-width="1.7" points="${pts}" />
+    ${fill ? `<polyline fill="${fillCol}" stroke="none" points="0,${h} ${pts} ${w},${h}" />` : ""}
+  `;
+  return { up, first: vals[0], last: vals[vals.length - 1], changePct: ((vals[vals.length - 1] - vals[0]) / (vals[0] || 1)) * 100 };
+}
+
+function logoHtml(c) {
+  if (c?.logo) {
+    return `<img class="coin-logo" src="${escapeHtml(c.logo)}" alt="" loading="lazy" width="16" height="16" />`;
+  }
+  const letter = String(c?.symbol || "?").slice(0, 1);
+  return `<span class="coin-logo ph">${escapeHtml(letter)}</span>`;
+}
+
+function assetCell(c) {
+  return `<div class="asset-cell">${logoHtml(c)}<div class="asset-meta"><span class="sym">${escapeHtml(c.symbol)}</span><span class="nm">${escapeHtml(c.name || "")}</span></div></div>`;
+}
+
 function openDrawer({ kicker, title, bodyHtml, mode }) {
   state.drawerMode = mode || null;
   els.drawerKicker.textContent = kicker || "Detail";
   els.drawerTitle.textContent = title || "—";
   els.drawerBody.innerHTML = "";
-  if (typeof bodyHtml === "string") {
-    els.drawerBody.innerHTML = bodyHtml;
-  } else if (bodyHtml instanceof Node) {
-    els.drawerBody.appendChild(bodyHtml);
-  }
+  if (typeof bodyHtml === "string") els.drawerBody.innerHTML = bodyHtml;
+  else if (bodyHtml instanceof Node) els.drawerBody.appendChild(bodyHtml);
   els.drawer.classList.add("open");
   els.drawer.setAttribute("aria-hidden", "false");
   els.drawerScrim.hidden = false;
@@ -187,7 +246,6 @@ function closeDrawer() {
   els.drawer.classList.remove("open");
   els.drawer.setAttribute("aria-hidden", "true");
   els.drawerScrim.hidden = true;
-  // park duel mount back if it was moved
   if (els.duelMount && !document.getElementById("duelMount")) {
     document.body.appendChild(els.duelMount);
   }
@@ -212,11 +270,7 @@ function closeModal() {
 function enterFloor() {
   els.splash.classList.add("go");
   els.floor.classList.add("on");
-  try {
-    sessionStorage.setItem("cmc_witness_entered", "1");
-  } catch {
-    /* ignore */
-  }
+  try { sessionStorage.setItem("cmc_witness_entered", "1"); } catch { /* */ }
 }
 
 function maybeAutoEnter() {
@@ -225,11 +279,7 @@ function maybeAutoEnter() {
     enterFloor();
     return;
   }
-  try {
-    if (sessionStorage.getItem("cmc_witness_entered") === "1") enterFloor();
-  } catch {
-    /* ignore */
-  }
+  try { if (sessionStorage.getItem("cmc_witness_entered") === "1") enterFloor(); } catch { /* */ }
 }
 
 function evidenceForRound(round) {
@@ -302,13 +352,11 @@ function renderTheatre(round, { animate } = {}) {
   els.judgeBubble.classList.remove("show");
   reckless.classList.remove("hot");
   witness.className = "actor witness-actor";
-
   els.proposeBubble.textContent = round?.reckless_line || "—";
   const dec = String(round?.decision || "—").toUpperCase();
   els.judgeBubble.innerHTML = round
     ? `${escapeHtml(dec)} <span style="color:var(--fg3);font-size:0.85em">· ${round.score}/100</span>`
     : "—";
-
   const show = () => {
     els.proposeBubble.classList.add("show");
     reckless.classList.add("hot");
@@ -335,11 +383,8 @@ function renderEnrichment(data) {
     return;
   }
   els.enrichBlock.hidden = false;
-
   const order = ["24h", "7d", "30d", "all_time"];
-  const sorted = [...(perf ?? [])].sort(
-    (a, b) => order.indexOf(a.period) - order.indexOf(b.period),
-  );
+  const sorted = [...(perf ?? [])].sort((a, b) => order.indexOf(a.period) - order.indexOf(b.period));
   els.perfGrid.innerHTML = sorted
     .map((p) => {
       const cls = pctClass(p.percent_change);
@@ -349,41 +394,11 @@ function renderEnrichment(data) {
       </div>`;
     })
     .join("");
-
-  if (spark?.length) {
-    const min = Math.min(...spark);
-    const max = Math.max(...spark);
-    const span = max - min || 1;
-    const pts = spark
-      .map((v, i) => {
-        const x = (i / Math.max(spark.length - 1, 1)) * 200;
-        const y = 32 - ((v - min) / span) * 28;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ");
-    const up = spark[spark.length - 1] >= spark[0];
-    const stroke = up ? "#3dff9c" : "#ff5d6c";
-    els.sparkSvg.innerHTML = `
-      <polyline fill="none" stroke="${stroke}" stroke-width="1.6" points="${pts}" />
-      <polyline fill="${up ? "rgba(61,255,156,.12)" : "rgba(255,93,108,.12)"}" stroke="none"
-        points="0,36 ${pts} 200,36" />
-    `;
-  } else {
-    els.sparkSvg.innerHTML = "";
-  }
+  if (spark?.length) renderSpark(els.sparkSvg, spark.map((v) => ({ v })), { fill: true });
+  else els.sparkSvg.innerHTML = "";
 }
 
-function applyVerdictView({
-  decision,
-  score,
-  symbol,
-  sub,
-  caseIdx,
-  recklessLine,
-  reasons,
-  evidence,
-  enrichment,
-}) {
+function applyVerdictView({ decision, score, symbol, sub, caseIdx, recklessLine, reasons, evidence, enrichment }) {
   const d = decision || "";
   els.verdictBlock.dataset.decision = d;
   els.verdictWord.textContent = d ? String(d).toUpperCase() : "STANDBY";
@@ -413,7 +428,6 @@ function applyVerdictView({
       )
       .join("");
   }
-
   if (enrichment) renderEnrichment(enrichment);
   else hideEnrichment();
 }
@@ -462,13 +476,9 @@ function renderChain(report) {
     if (els.chainHint) els.chainHint.textContent = "prev_hash trail · scrub to inspect";
     return;
   }
-
   els.chainScrub.max = String(nodes.length - 1);
   els.chainScrub.value = String(state.index);
-  if (els.chainHint) {
-    els.chainHint.textContent = `${nodes.length} linked blocks · integrity via prev_hash → receipt_hash`;
-  }
-
+  if (els.chainHint) els.chainHint.textContent = `${nodes.length} linked blocks · integrity via prev_hash → receipt_hash`;
   els.chainTrack.innerHTML = nodes
     .map((n, i) => {
       const prev = n.prev_hash == null ? "genesis" : shortHash(n.prev_hash);
@@ -480,14 +490,12 @@ function renderChain(report) {
       </div>`;
     })
     .join("");
-
   els.chainTrack.querySelectorAll(".chain-node").forEach((node) => {
     node.addEventListener("click", () => {
       selectRound(Number(node.dataset.i), { animate: true });
       openReceiptDrawer(Number(node.dataset.i));
     });
   });
-
   updateChainFocus(nodes[state.index]);
 }
 
@@ -607,13 +615,23 @@ async function loadReceipts() {
   }
 }
 
-function coinRows(list) {
-  if (!list?.length) return `<tr><td colspan="3" class="empty">No data</td></tr>`;
+function coinRows(list, { withRank = false } = {}) {
+  if (!list?.length) return `<tr><td colspan="${withRank ? 5 : 3}" class="empty">No data</td></tr>`;
   return list
     .map((c) => {
       const pct = c.percent_change_24h;
+      const rank = c.cmc_rank != null ? c.cmc_rank : "—";
+      if (withRank) {
+        return `<tr class="pick" data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(pct ?? "")}">
+          <td>${escapeHtml(rank)}</td>
+          <td>${assetCell(c)}</td>
+          <td>${escapeHtml(fmtUsd(c.price_usd))}</td>
+          <td class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</td>
+          <td>${escapeHtml(fmtUsd(c.market_cap))}</td>
+        </tr>`;
+      }
       return `<tr class="pick" data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(pct ?? "")}">
-        <td class="sym">${escapeHtml(c.symbol)} <span style="color:var(--fg3);font-weight:500">${escapeHtml(c.name)}</span></td>
+        <td>${assetCell(c)}</td>
         <td>${escapeHtml(fmtUsd(c.price_usd))}</td>
         <td class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</td>
       </tr>`;
@@ -626,9 +644,8 @@ function coinListItems(list) {
   return list
     .map((c) => {
       const pct = c.percent_change_24h;
-      const name = c.name ? ` <span class="nm">${escapeHtml(c.name)}</span>` : "";
       return `<li data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(pct ?? "")}">
-        <span class="n">${escapeHtml(c.symbol)}${name}</span>
+        <span class="n">${logoHtml(c)}${escapeHtml(c.symbol)}<span class="nm">${escapeHtml(c.name || "")}</span></span>
         <span class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</span>
       </li>`;
     })
@@ -656,51 +673,17 @@ function openCoinDrawer(el) {
       <button type="button" class="run-btn" id="drawerRunGate" style="width:100%;margin-top:8px">Run gate · ${escapeHtml(sym)}</button>
     `,
   });
-  const btn = document.getElementById("drawerRunGate");
-  if (btn) {
-    btn.addEventListener("click", () => {
-      els.symInput.value = sym;
-      closeDrawer();
-      runLiveGate(sym);
-    });
-  }
-}
-
-function bindPick(root) {
-  root.querySelectorAll("[data-sym]").forEach((el) => {
-    el.addEventListener("click", () => openCoinDrawer(el));
+  document.getElementById("drawerRunGate")?.addEventListener("click", () => {
+    els.symInput.value = sym;
+    closeDrawer();
+    runLiveGate(sym);
   });
 }
 
-function openKpiModal(key) {
-  const floor = state.marketFloor;
-  const g = floor?.global ?? {};
-  const fg = floor?.fear_greed ?? {};
-  const alt = floor?.altcoin_season ?? {};
-  const map = {
-    mcap: {
-      title: "Total crypto mcap",
-      body: `<p><b>${escapeHtml(fmtUsd(g.total_market_cap))}</b></p><p>CMC global-metrics · total market capitalization across listed assets. Context for the gate — not a trade signal.</p>`,
-    },
-    vol: {
-      title: "24h volume",
-      body: `<p><b>${escapeHtml(fmtUsd(g.total_volume_24h))}</b></p><p>Reported USD volume (CMC global-metrics). Thin aggregate volume days often pair with CAUTION/BLOCK on micro-caps.</p>`,
-    },
-    btcd: {
-      title: "BTC dominance",
-      body: `<p><b>${g.btc_dominance != null ? escapeHtml(Number(g.btc_dominance).toFixed(2)) + "%" : "—"}</b></p><p>BTC share of total mcap. ETH.D: <b>${g.eth_dominance != null ? escapeHtml(Number(g.eth_dominance).toFixed(2)) + "%" : "—"}</b>.</p>`,
-    },
-    fg: {
-      title: "Fear & Greed",
-      body: `<p><b>${escapeHtml(fg.value ?? "—")}</b> · ${escapeHtml(fg.classification || "—")}</p><p>CMC v3 Fear &amp; Greed index — Pro floor context only. Witness does <b>not</b> invent this onto receipts.</p>`,
-    },
-    alt: {
-      title: "Altcoin Season",
-      body: `<p><b>${escapeHtml(alt.index ?? "—")}</b></p><p>Yearly high ${escapeHtml(alt.yearly_high ?? "—")} · low ${escapeHtml(alt.yearly_low ?? "—")}. Labeled CMC index for market regime context.</p>`,
-    },
-  };
-  const m = map[key];
-  if (m) openModal(m);
+function bindPick(root) {
+  root?.querySelectorAll("[data-sym]").forEach((el) => {
+    el.addEventListener("click", () => openCoinDrawer(el));
+  });
 }
 
 function mountDuelIntoDrawer() {
@@ -710,24 +693,13 @@ function mountDuelIntoDrawer() {
 }
 
 function openDuelDrawer() {
-  openDrawer({
-    kicker: "Duel theatre",
-    title: "Reckless vs Witness",
-    mode: "duel",
-    bodyHtml: "",
-  });
+  openDrawer({ kicker: "Duel theatre", title: "Reckless vs Witness", mode: "duel", bodyHtml: "" });
   mountDuelIntoDrawer();
 }
 
 function openChainDrawer() {
-  openDrawer({
-    kicker: "Receipt chain",
-    title: "prev_hash trail",
-    mode: "chain",
-    bodyHtml: "",
-  });
+  openDrawer({ kicker: "Receipt chain", title: "prev_hash trail", mode: "chain", bodyHtml: "" });
   mountDuelIntoDrawer();
-  // scroll chain into view inside drawer
   els.chainTrack?.scrollIntoView({ block: "nearest" });
 }
 
@@ -760,6 +732,12 @@ function openReceiptDrawer(i) {
   });
 }
 
+function cycleLine(stats, symbol) {
+  const row = (stats ?? []).find((s) => String(s.symbol).toUpperCase() === symbol);
+  if (!row) return "ATH — · ATL —";
+  return `ATH ${fmtUsd(row.high)} · ATL ${fmtUsd(row.low)}`;
+}
+
 function renderMarketFloor(floor) {
   state.marketFloor = floor;
   if (!floor || floor.error) {
@@ -775,33 +753,49 @@ function renderMarketFloor(floor) {
   els.floorBanner.className = `mock-banner ${mock ? "mock" : "live"}`;
   els.bannerText.textContent = mock
     ? "MOCK MARKET FLOOR — labeled sample (no CMC_API_KEY)"
-    : `LIVE CMC PRO · ${floor.endpoints_used?.length ?? 0} endpoints · ~${Math.round((floor.cache_ttl_ms ?? 55000) / 1000)}s cache · ${floor.fetched_at ?? ""}`;
+    : `LIVE CMC PRO · ${floor.endpoints_used?.length ?? 0} endpoints · ~${Math.round((floor.cache_ttl_ms ?? 60000) / 1000)}s cache · ${floor.fetched_at ?? ""}`;
   els.sessFloor.textContent = mock ? "Floor · MOCK" : "Floor · CMC Pro";
-  els.floorMeta.textContent = `${floor.source} · ${floor.fetched_at ?? ""}`;
+  els.floorMeta.textContent = `${floor.source} · ${floor.endpoints_used?.length ?? 0} endpoints · ${floor.fetched_at ?? ""}`;
 
   const g = floor.global ?? {};
-  els.mkMcap.textContent = fmtUsd(g.total_market_cap);
-  els.mkVol.textContent = fmtUsd(g.total_volume_24h);
-  els.mkBtcD.textContent = g.btc_dominance != null ? `${Number(g.btc_dominance).toFixed(1)}%` : "—";
-  if (els.mkEthD) {
-    els.mkEthD.textContent = g.eth_dominance != null ? `${Number(g.eth_dominance).toFixed(2)}%` : "—";
-  }
+  els.heroMcap.textContent = fmtUsd(g.total_market_cap);
+  els.heroVol.textContent = fmtUsd(g.total_volume_24h);
+  els.heroBtcD.textContent = g.btc_dominance != null ? `${Number(g.btc_dominance).toFixed(1)}%` : "—";
+  els.heroEthD.textContent = g.eth_dominance != null ? `${Number(g.eth_dominance).toFixed(2)}%` : "—";
 
   const fg = floor.fear_greed ?? {};
   const fgVal = fg.value != null ? Number(fg.value) : null;
   els.mkFgVal.textContent = fgVal != null ? String(fgVal) : "—";
-  if (els.mkFgClass) els.mkFgClass.textContent = fg.classification || "—";
-  if (fgVal != null && els.fgRing) els.fgRing.style.setProperty("--fg", String(fgVal));
+  els.mkFgClass.textContent = fg.classification || "—";
+  els.mkFgSub.textContent = fg.update_time ? String(fg.update_time).slice(0, 19) : "CMC v3 index";
+  if (fgVal != null) els.fgRing.style.setProperty("--fg", String(fgVal));
+  els.fgChip.textContent = fgVal != null ? String(fgVal) : "—";
 
   const alt = floor.altcoin_season ?? {};
   els.mkAlt.textContent = alt.index != null ? String(alt.index) : "—";
-  if (els.mkAltSub) {
-    els.mkAltSub.textContent =
-      alt.yearly_high != null
-        ? `yr high ${alt.yearly_high} · low ${alt.yearly_low ?? "—"}`
-        : "index · CMC";
-  }
+  els.mkAltSub.textContent =
+    alt.yearly_high != null
+      ? `yr high ${alt.yearly_high} · low ${alt.yearly_low ?? "—"}`
+      : "index · CMC";
 
+  const fgSpark = renderSpark(els.fgSpark, floor.fear_greed_history, { strokeUp: "#e8b84a", strokeDn: "#ff5d6c" });
+  if (fgSpark) els.fgChip.textContent = `${fgVal ?? "—"} · ${fgSpark.changePct >= 0 ? "+" : ""}${fgSpark.changePct.toFixed(0)}`;
+
+  renderSpark(els.altSpark, floor.altcoin_season_history, { strokeUp: "#3ee8f0", strokeDn: "#ff5d6c" });
+
+  const mcapSpark = renderSpark(els.mcapSpark, floor.global_mcap_history, { strokeUp: "#e8b84a", strokeDn: "#ff5d6c" });
+  els.mcapChip.textContent = mcapSpark ? fmtPct(mcapSpark.changePct) : "—";
+  if (mcapSpark) els.mcapChip.style.color = mcapSpark.up ? "var(--green)" : "var(--red)";
+
+  const btcSpark = renderSpark(els.btcSpark, floor.btc_ohlcv);
+  els.btcChip.textContent = btcSpark ? fmtUsd(btcSpark.last, 0) : "—";
+  els.btcCycle.textContent = cycleLine(floor.cycle_stats, "BTC");
+
+  const ethSpark = renderSpark(els.ethSpark, floor.eth_ohlcv, { strokeUp: "#3ee8f0", strokeDn: "#ff5d6c" });
+  els.ethChip.textContent = ethSpark ? fmtUsd(ethSpark.last, 0) : "—";
+  els.ethCycle.textContent = cycleLine(floor.cycle_stats, "ETH");
+
+  els.topMcapBody.innerHTML = coinRows(floor.top_market_cap, { withRank: true });
   els.gainersBody.innerHTML = coinRows(floor.gainers);
   els.losersBody.innerHTML = coinRows(floor.losers);
   els.trendingList.innerHTML = coinListItems(floor.trending);
@@ -812,7 +806,7 @@ function renderMarketFloor(floor) {
     ? news
         .map(
           (c) =>
-            `<button type="button" class="new-chip" data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(c.percent_change_24h ?? "")}"><b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(fmtPct(c.percent_change_24h))}</span></button>`,
+            `<button type="button" class="new-chip" data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(c.percent_change_24h ?? "")}">${logoHtml(c)}<b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(fmtPct(c.percent_change_24h))}</span></button>`,
         )
         .join("")
     : `<span class="empty">No new listings</span>`;
@@ -823,7 +817,7 @@ function renderMarketFloor(floor) {
         .map((c) => {
           const ch = c.avg_price_change ?? c.market_cap_change;
           return `<li data-cat="${escapeHtml(c.name)}">
-            <span class="n">${escapeHtml(c.name)}</span>
+            <span class="n">${escapeHtml(c.name)} <span class="nm">${escapeHtml(fmtUsd(c.market_cap))}</span></span>
             <span class="${pctClass(ch)}">${escapeHtml(fmtPct(ch))}</span>
           </li>`;
         })
@@ -834,11 +828,26 @@ function renderMarketFloor(floor) {
     el.addEventListener("click", () => {
       openModal({
         title: el.getAttribute("data-cat") || "Category",
-        bodyHtml: `<p>CMC category mover from the Pro floor. Use as sector context beside the gate — not a sizing instruction.</p><p>24h change shown on the row.</p>`,
+        bodyHtml: `<p>CMC category by market cap from the Pro floor. Sector context beside the gate — not a sizing instruction.</p>`,
       });
     });
   });
 
+  const airs = floor.airdrops ?? [];
+  if (airs.length) {
+    els.airRow.hidden = false;
+    els.airStrip.innerHTML = airs
+      .map(
+        (a) =>
+          `<div class="air-chip"><b>${escapeHtml(a.coin_symbol || "—")}</b> · ${escapeHtml(a.project_name)}</div>`,
+      )
+      .join("");
+  } else {
+    els.airRow.hidden = true;
+    els.airStrip.innerHTML = "";
+  }
+
+  bindPick(els.topMcapBody);
   bindPick(els.gainersBody);
   bindPick(els.losersBody);
   bindPick(els.trendingList);
@@ -864,9 +873,7 @@ async function tryFetchDefault() {
       const data = await fetchJson(url);
       loadReport(data);
       return;
-    } catch {
-      /* next */
-    }
+    } catch { /* next */ }
   }
   els.reportMeta.textContent = "No duel-report.json — run: pnpm witness duel --fixture";
   renderVerdict(null);
@@ -925,23 +932,6 @@ async function runLiveGate(symbol) {
   }
 }
 
-/* Tabs */
-document.querySelectorAll(".tabs").forEach((group) => {
-  group.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const name = tab.getAttribute("data-tab");
-      group.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
-      const panel = group.closest(".panel");
-      panel?.querySelectorAll(".tab-pane").forEach((p) => {
-        const on = p.id === `pane-${name}`;
-        p.toggleAttribute("hidden", !on);
-        p.classList.toggle("on", on);
-      });
-    });
-  });
-});
-
-/* Help / allow modal */
 document.querySelectorAll("[data-modal]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const key = btn.getAttribute("data-modal");
@@ -950,18 +940,12 @@ document.querySelectorAll("[data-modal]").forEach((btn) => {
   });
 });
 els.allowHelpBtn?.addEventListener("click", () => openModal(HELP.allow));
-
-document.querySelectorAll(".kpi-tap").forEach((btn) => {
-  btn.addEventListener("click", () => openKpiModal(btn.getAttribute("data-kpi")));
-});
-
 els.openChainBtn?.addEventListener("click", openChainDrawer);
 els.openDuelBtn?.addEventListener("click", openDuelDrawer);
 els.drawerClose?.addEventListener("click", closeDrawer);
 els.drawerScrim?.addEventListener("click", closeDrawer);
 els.modalClose?.addEventListener("click", closeModal);
 els.modalScrim?.addEventListener("click", closeModal);
-
 els.enterBtn.addEventListener("click", enterFloor);
 
 els.fileInput.addEventListener("change", async (e) => {
@@ -986,7 +970,6 @@ els.theatreBtn.addEventListener("click", () => {
 els.chainScrub.addEventListener("input", () => {
   selectRound(Number(els.chainScrub.value), { animate: false });
 });
-
 els.gateForm.addEventListener("submit", (e) => {
   e.preventDefault();
   runLiveGate(els.symInput.value);
@@ -1009,8 +992,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 function tickClock() {
-  const d = new Date();
-  els.clk.textContent = d.toISOString().slice(11, 19);
+  els.clk.textContent = new Date().toISOString().slice(11, 19);
 }
 tickClock();
 setInterval(tickClock, 1000);

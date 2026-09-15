@@ -123,7 +123,7 @@ Optional hosted MCP (we still ship our own receipt-layer MCP):
 
 ## Judge Console + Pro Market Floor
 
-Fullscreen-ready terminal for hackathon judges — **CMC Pro market floor** (live global KPIs, Fear&Greed, Altcoin Season, gainers/losers, trending, new listings, categories) plus the pre-trade gate, dossier evidence, scrubbable receipt chain, and **Duel Theatre**. Gate sits **in** market context, not alone. Honest labels: **gate ≠ buy**; Pro panels = market context from CMC.
+Fullscreen-ready terminal for hackathon judges — **CMC Pro market floor** (live global KPIs, F&G + mcap + BTC/ETH sparklines, top mcap board with logos, gainers/losers, trending, categories, airdrops) plus the pre-trade gate, dossier evidence, scrubbable receipt chain, and **Duel Theatre**. Gate sits **in** market context, not alone. Honest labels: **gate ≠ buy**; Pro panels = market context from CMC.
 
 ```bash
 pnpm witness duel --fixture   # writes duel-report.json (+ receipts JSONL)
@@ -136,7 +136,7 @@ pnpm console                  # → http://127.0.0.1:4173
 1. Put `CMC_API_KEY` in `.env` (gitignored) for the live Pro floor. Without a key, `/api/market-floor` returns **503** (or labeled **MOCK** if `?mock=1` / `CMC_WITNESS_MARKET_FLOOR_MOCK=1`).
 2. Run the fixture duel (offline gate demo).
 3. `pnpm console` → open **http://127.0.0.1:4173**.
-4. Market strip + panels load from **`GET /api/market-floor`** (in-memory cache ~55s).
+4. Market strip + panels load from **`GET /api/market-floor`** (in-memory cache ~60s).
 5. Run a live check — verdict + dossier; when Pro key is present, **price-performance** + **OHLCV spark** attach.
 6. Hit **Theatre** (or Space) for Reckless vs Witness; scrub the receipt chain.
 
@@ -170,19 +170,27 @@ Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.pn
 
 ### Pro market floor (`GET /api/market-floor`)
 
-Parallel key-auth calls via `src/cmc/market-floor.ts` (credits cached ~55s):
+Parallel key-auth calls via `src/cmc/market-floor.ts` (credits cached ~60s):
 
-| Panel | Endpoint |
-|-------|----------|
+| Panel / series | Endpoint |
+|----------------|----------|
 | Total mcap / volume / BTC.D / ETH.D | `/v1/global-metrics/quotes/latest` |
+| Global mcap spark (14d) | `/v1/global-metrics/quotes/historical?count=14&interval=daily` |
 | Fear & Greed | `/v3/fear-and-greed/latest` |
+| Fear & Greed history spark | `/v3/fear-and-greed/historical?limit=14` |
 | Altcoin Season | `/v1/altcoin-season-index/latest` |
+| Altcoin Season history | `/v1/altcoin-season-index/historical?time_period=30d` |
 | Gainers | `/v1/cryptocurrency/trending/gainers-losers` |
 | Losers | `/v1/cryptocurrency/listings/latest?sort=percent_change_24h&sort_dir=asc` |
 | Trending | `/v1/cryptocurrency/trending/latest` |
 | Most visited | `/v1/cryptocurrency/trending/most-visited` |
 | New listings | `/v1/cryptocurrency/listings/new` |
-| Categories | `/v1/cryptocurrency/categories?limit=10` |
+| Categories by mcap | `/v1/cryptocurrency/categories?limit=10` |
+| Top market-cap board | `/v1/cryptocurrency/listings/latest?limit=12&sort=market_cap` |
+| BTC / ETH OHLCV charts | `/v2/cryptocurrency/ohlcv/historical?id=1|1027&time_period=daily&count=30` |
+| BTC+ETH cycle highs/lows | `/v2/cryptocurrency/price-performance-stats/latest?id=1,1027` |
+| Logos + tags (batch) | `/v2/cryptocurrency/info?id=…` |
+| Ongoing airdrops | `/v1/cryptocurrency/airdrops?status=ONGOING&limit=6` (ENDED filtered out) |
 
 ### Check enrichment (`GET /api/check`)
 
@@ -193,7 +201,7 @@ When `CMC_API_KEY` is set, also attaches:
 | `price_performance` | `/v2/cryptocurrency/price-performance-stats/latest` |
 | `ohlcv_spark` | `/v2/cryptocurrency/ohlcv/historical` (daily closes) |
 
-Skipped on this plan: `content/latest`, `exchange/listings`, `market-pairs`.
+Skipped on this plan (403): `content/*`, community trending, `market-pairs`, exchange quotes.
 
 ---
 

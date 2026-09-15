@@ -16,7 +16,6 @@
   <div class="hud bl" aria-hidden="true"></div>
   <div class="hud br" aria-hidden="true"></div>
 
-  <!-- ===== SPLASH ===== -->
   <div id="splash">
     <div class="xbeams" aria-hidden="true"><div class="b b1"></div><div class="b b2"></div></div>
     <div class="splash-kicker">Build with CMC · AI Agents &amp; Automation · #BuildwithCMC</div>
@@ -30,21 +29,20 @@
     <p class="splash-brand">Pre-trade Gate · Pro Market Floor</p>
     <p class="splash-sub">
       Free sites show BTC’s price. <b>Witness is a pre-trade referee</b>: agents clear
-      <code>before_you_trade</code> before sizing. Live <b>CMC Pro floor</b> context —
-      gainers, Fear&amp;Greed, trending — sits beside the gate. Gate ≠ buy.
+      <code>before_you_trade</code> before sizing. Live <b>CMC Pro floor</b> —
+      sparklines, logos, top mcap, F&amp;G history — sits beside the gate. Gate ≠ buy.
     </p>
     <div class="splash-pills">
       <span class="sp g">MCP</span>
       <span class="sp c">x402</span>
       <span class="sp g">Market Receipts</span>
-      <span class="sp c">Pro floor</span>
+      <span class="sp c">Pro series</span>
       <span class="sp g">Pre-trade gate</span>
     </div>
     <button class="enter" id="enterBtn" type="button">Enter the floor</button>
     <div class="splash-trust">Catches ticker collisions · low-liq / rug-like tokens · never invents metrics</div>
   </div>
 
-  <!-- ===== FLOOR (100vh, no page scroll) ===== -->
   <div id="floor">
     <div class="mock-banner" id="floorBanner">
       <span class="dot"></span>
@@ -66,6 +64,10 @@
       <button class="help-btn top-help" type="button" id="allowHelpBtn" title="What is ALLOW?" aria-label="What is ALLOW">?</button>
 
       <div class="hero-stats" id="kpiStrip">
+        <div class="hs gold" title="Total market cap"><div class="hs-l">Mcap</div><div class="hs-v" id="heroMcap">—</div></div>
+        <div class="hs cyan" title="24h volume"><div class="hs-l">Vol 24h</div><div class="hs-v" id="heroVol">—</div></div>
+        <div class="hs" title="BTC dominance"><div class="hs-l">BTC.D</div><div class="hs-v" id="heroBtcD">—</div></div>
+        <div class="hs" title="ETH dominance"><div class="hs-l">ETH.D</div><div class="hs-v" id="heroEthD">—</div></div>
         <div class="hs pnl-up" title="Duel allows"><div class="hs-l">Allows</div><div class="hs-v" id="kpiAllow">0</div></div>
         <div class="hs" style="border-color:rgba(240,160,48,.28)" title="Duel cautions"><div class="hs-l">Caution</div><div class="hs-v" id="kpiCaution" style="color:var(--amber)">0</div></div>
         <div class="hs pnl-dn" title="Duel blocks"><div class="hs-l">Blocks</div><div class="hs-v" id="kpiBlock">0</div></div>
@@ -95,50 +97,101 @@
       </div>
     </div>
 
-    <!-- Market strip — always-on Pro KPIs from ab588e3 -->
-    <section class="market-strip" id="marketStrip" aria-label="CMC Pro market KPIs">
-      <button type="button" class="mk kpi-tap" data-kpi="mcap" title="Total crypto market cap">
-        <div class="mk-l">Total mcap</div>
-        <div class="mk-v gold" id="mkMcap">—</div>
-        <div class="mk-s">CMC global</div>
-      </button>
-      <button type="button" class="mk kpi-tap" data-kpi="vol" title="24h volume">
-        <div class="mk-l">24h volume</div>
-        <div class="mk-v cyan" id="mkVol">—</div>
-        <div class="mk-s">USD · reported</div>
-      </button>
-      <button type="button" class="mk kpi-tap" data-kpi="btcd" title="BTC dominance">
-        <div class="mk-l">BTC.D</div>
-        <div class="mk-v" id="mkBtcD">—</div>
-        <div class="mk-s">BTC dominance</div>
-      </button>
-      <div class="mk" title="ETH dominance">
-        <div class="mk-l">ETH.D</div>
-        <div class="mk-v" id="mkEthD">—</div>
-        <div class="mk-s">ETH dominance</div>
-      </div>
-      <button type="button" class="mk fg-gauge kpi-tap" data-kpi="fg" title="Fear &amp; Greed Index">
-        <div class="mk-l">Fear &amp; Greed</div>
-        <div class="fg-row">
-          <div class="fg-ring" id="fgRing" style="--fg:50">
-            <span id="mkFgVal">—</span>
+    <section class="pulse-row" aria-label="Pro series pulse">
+      <article class="panel pulse fg-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">Fear &amp; Greed</div>
+              <div class="ph-s">v3 · 14d spark</div>
+            </div>
           </div>
-          <div>
-            <div class="mk-v mk-fg-class" id="mkFgClass">—</div>
-            <div class="mk-s">CMC v3 index</div>
+          <span class="chip" id="fgChip">—</span>
+        </div>
+        <div class="panel-body pulse-body">
+          <div class="fg-hero">
+            <div class="fg-ring lg" id="fgRing" style="--fg:50"><span id="mkFgVal">—</span></div>
+            <div>
+              <div class="mk-v mk-fg-class" id="mkFgClass">—</div>
+              <div class="mk-s" id="mkFgSub">CMC index</div>
+            </div>
+          </div>
+          <svg class="spark tall" id="fgSpark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-label="F&amp;G history"></svg>
+        </div>
+      </article>
+
+      <article class="panel pulse alt-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot c"></span>
+            <div>
+              <div class="ph-t" style="color:var(--cyan)">Altcoin Season</div>
+              <div class="ph-s">index · 30d</div>
+            </div>
           </div>
         </div>
-      </button>
-      <button type="button" class="mk kpi-tap" data-kpi="alt" title="Altcoin Season">
-        <div class="mk-l">Altcoin Season</div>
-        <div class="mk-v gold" id="mkAlt">—</div>
-        <div class="mk-s" id="mkAltSub">index · CMC</div>
-      </button>
+        <div class="panel-body pulse-body">
+          <div class="pulse-metric">
+            <div class="mk-v gold" id="mkAlt">—</div>
+            <div class="mk-s" id="mkAltSub">yr range —</div>
+          </div>
+          <svg class="spark tall" id="altSpark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-label="Altseason history"></svg>
+        </div>
+      </article>
+
+      <article class="panel pulse mcap-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">Global mcap</div>
+              <div class="ph-s">14d daily</div>
+            </div>
+          </div>
+          <span class="chip" id="mcapChip">—</span>
+        </div>
+        <div class="panel-body pulse-body">
+          <svg class="spark tall" id="mcapSpark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-label="Mcap spark"></svg>
+        </div>
+      </article>
+
+      <article class="panel pulse btc-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">BTC · 30d</div>
+              <div class="ph-s">OHLCV close</div>
+            </div>
+          </div>
+          <span class="chip" id="btcChip">—</span>
+        </div>
+        <div class="panel-body pulse-body">
+          <svg class="spark tall" id="btcSpark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-label="BTC OHLCV"></svg>
+          <div class="cycle-line" id="btcCycle">ATH — · ATL —</div>
+        </div>
+      </article>
+
+      <article class="panel pulse eth-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot c"></span>
+            <div>
+              <div class="ph-t" style="color:var(--cyan)">ETH · 30d</div>
+              <div class="ph-s">OHLCV close</div>
+            </div>
+          </div>
+          <span class="chip" id="ethChip">—</span>
+        </div>
+        <div class="panel-body pulse-body">
+          <svg class="spark tall" id="ethSpark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-label="ETH OHLCV"></svg>
+          <div class="cycle-line" id="ethCycle">ATH — · ATL —</div>
+        </div>
+      </article>
     </section>
 
-    <!-- Main viewport grid -->
     <section class="main-grid" aria-label="Market floor panels">
-      <!-- Gate — spans 2 rows -->
       <article class="panel us gate-panel">
         <div class="ph">
           <div class="ph-l">
@@ -183,10 +236,37 @@
             <div class="rw-h">Reasons <span class="rw-sub">CMC-observed only</span></div>
             <ul class="reasons" id="reasonsList"></ul>
           </div>
+
+          <div class="ev-mini">
+            <div class="rw-h">Evidence</div>
+            <div class="ev-table-wrap mini">
+              <table class="ev-table" id="evidenceTable">
+                <thead><tr><th>Endpoint</th><th>Cr</th><th>Why</th></tr></thead>
+                <tbody id="evidenceBody"><tr><td colspan="3" class="empty">No evidence yet.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </article>
 
-      <!-- Gainers — always on -->
+      <article class="panel mkt top-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">Top mcap</div>
+              <div class="ph-s">12 · logos</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body tight">
+          <table class="mkt-table logo-table">
+            <thead><tr><th>#</th><th>Asset</th><th>Price</th><th>24h</th><th>Mcap</th></tr></thead>
+            <tbody id="topMcapBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+
       <article class="panel mkt gainers-panel">
         <div class="ph">
           <div class="ph-l">
@@ -198,14 +278,13 @@
           </div>
         </div>
         <div class="panel-body tight">
-          <table class="mkt-table">
+          <table class="mkt-table logo-table">
             <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
             <tbody id="gainersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
           </table>
         </div>
       </article>
 
-      <!-- Losers — always on -->
       <article class="panel mkt losers-panel">
         <div class="ph">
           <div class="ph-l">
@@ -217,14 +296,13 @@
           </div>
         </div>
         <div class="panel-body tight">
-          <table class="mkt-table">
+          <table class="mkt-table logo-table">
             <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
             <tbody id="losersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
           </table>
         </div>
       </article>
 
-      <!-- Heat: trending + visited both visible -->
       <article class="panel mkt heat-panel">
         <div class="ph">
           <div class="ph-l">
@@ -247,7 +325,6 @@
         </div>
       </article>
 
-      <!-- New + categories -->
       <article class="panel mkt listings-panel">
         <div class="ph">
           <div class="ph-l">
@@ -261,12 +338,11 @@
         <div class="panel-body tight">
           <div class="list-h">New listings</div>
           <div class="new-strip" id="newStrip"><span class="empty">Loading…</span></div>
-          <div class="list-h" style="margin-top:2px">Categories</div>
+          <div class="list-h" style="margin-top:2px">Categories by mcap</div>
           <ul class="coin-list cat-scroll" id="catList"><li class="empty">Loading…</li></ul>
         </div>
       </article>
 
-      <!-- Dossier -->
       <article class="panel core dossier-panel">
         <div class="ph">
           <div class="ph-l">
@@ -282,48 +358,25 @@
           <div class="case-strip">
             <span class="cs-line" id="recklessLine">Load a duel or run the gate.</span>
           </div>
-          <div class="ev-table-wrap">
-            <table class="ev-table" id="evidenceTable">
-              <thead>
-                <tr><th>Endpoint</th><th>Credits</th><th>Why</th></tr>
-              </thead>
-              <tbody id="evidenceBody">
-                <tr><td colspan="3" class="empty">No evidence yet.</td></tr>
-              </tbody>
-            </table>
+          <div class="ops-row">
+            <button type="button" class="ops-chip" id="openChainBtn">
+              <span class="oc-k">Receipt chain</span>
+              <span class="oc-v" id="chainChipVal">0 linked · open →</span>
+            </button>
+            <button type="button" class="ops-chip duel" id="openDuelBtn">
+              <span class="oc-k">Duel theatre</span>
+              <span class="oc-v" id="duelChipVal">Reckless vs Witness →</span>
+            </button>
           </div>
-        </div>
-      </article>
-
-      <!-- Ops -->
-      <article class="panel cr ops-panel">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot c"></span>
-            <div>
-              <div class="ph-t">Ops</div>
-              <div class="ph-s">Chain · duel · CLI</div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-body ops-body">
-          <button type="button" class="ops-chip" id="openChainBtn">
-            <span class="oc-k">Receipt chain</span>
-            <span class="oc-v" id="chainChipVal">0 linked · open →</span>
-          </button>
-          <button type="button" class="ops-chip duel" id="openDuelBtn">
-            <span class="oc-k">Duel theatre</span>
-            <span class="oc-v" id="duelChipVal">Reckless vs Witness →</span>
-          </button>
           <div class="ops-meta" id="reportMeta">Offline fixture ready</div>
           <div class="ops-meta" id="floorMeta">Floor · —</div>
-          <div class="cli-mini">
-            <code>GET /api/market-floor</code>
-            <code>GET /api/check?symbol=BTC</code>
-            <code>GET /api/receipts</code>
-          </div>
         </div>
       </article>
+    </section>
+
+    <section class="air-row" id="airRow" hidden>
+      <div class="air-label">Airdrops · ONGOING</div>
+      <div class="air-strip" id="airStrip"></div>
     </section>
 
     <footer class="foot">
@@ -334,7 +387,6 @@
     </footer>
   </div>
 
-  <!-- Slide-over drawer -->
   <aside id="drawer" class="drawer" aria-hidden="true">
     <div class="drawer-head">
       <div>
@@ -347,7 +399,6 @@
   </aside>
   <div id="drawerScrim" class="scrim" hidden></div>
 
-  <!-- Modal -->
   <div id="modal" class="modal" aria-hidden="true" hidden>
     <div class="modal-card">
       <div class="modal-head">
@@ -359,7 +410,6 @@
   </div>
   <div id="modalScrim" class="scrim" hidden></div>
 
-  <!-- Hidden duel stage (used by theatre; surfaced in drawer) -->
   <div id="duelMount" hidden>
     <div class="duel-stage" id="duelStage">
       <div class="actor reckless-actor">

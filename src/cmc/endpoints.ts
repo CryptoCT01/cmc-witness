@@ -24,14 +24,20 @@ export const KEY_ENDPOINTS = {
 /** Pro market-floor / terminal endpoints (key auth). */
 export const MARKET_FLOOR_ENDPOINTS = {
   globalMetrics: "/v1/global-metrics/quotes/latest",
+  globalMetricsHistorical: "/v1/global-metrics/quotes/historical",
   fearAndGreed: "/v3/fear-and-greed/latest",
+  fearAndGreedHistorical: "/v3/fear-and-greed/historical",
   altcoinSeason: "/v1/altcoin-season-index/latest",
+  altcoinSeasonHistorical: "/v1/altcoin-season-index/historical",
   gainersLosers: "/v1/cryptocurrency/trending/gainers-losers",
   trendingLatest: "/v1/cryptocurrency/trending/latest",
   mostVisited: "/v1/cryptocurrency/trending/most-visited",
   listingsNew: "/v1/cryptocurrency/listings/new",
+  listingsLatest: "/v1/cryptocurrency/listings/latest",
   categories: "/v1/cryptocurrency/categories",
   ohlcvHistorical: "/v2/cryptocurrency/ohlcv/historical",
   ohlcvLatest: "/v2/cryptocurrency/ohlcv/latest",
   pricePerformance: "/v2/cryptocurrency/price-performance-stats/latest",
+  cryptoInfo: "/v2/cryptocurrency/info",
+  airdrops: "/v1/cryptocurrency/airdrops",
 } as const;
