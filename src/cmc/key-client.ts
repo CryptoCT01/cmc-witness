@@ -2,6 +2,7 @@ import axios, { type AxiosInstance } from "axios";
 import { CMC_BASE_URL, KEY_ENDPOINTS } from "./endpoints.js";
 import type {
   CmcClient,
+  CryptoAsset,
   DexPairQuoteResponse,
   DexSearchResponse,
   ListingsLatestResponse,
@@ -28,11 +29,24 @@ export class KeyCmcClient implements CmcClient {
     });
   }
 
+  /** v1 returns Record<symbol, asset>; v2 returns Record<symbol, asset[]>. Normalize to v1 shape. */
+  private normalizeQuotes(raw: QuotesLatestResponse | { status: QuotesLatestResponse["status"]; data: Record<string, CryptoAsset | CryptoAsset[]> }): QuotesLatestResponse {
+    const data: Record<string, CryptoAsset> = {};
+    for (const [sym, val] of Object.entries(raw.data ?? {})) {
+      if (Array.isArray(val)) {
+        if (val[0]) data[sym] = val[0];
+      } else if (val && typeof val === "object") {
+        data[sym] = val as CryptoAsset;
+      }
+    }
+    return { status: raw.status, data };
+  }
+
   async getQuotesLatest(symbol: string): Promise<QuotesLatestResponse> {
-    const { data } = await this.http.get<QuotesLatestResponse>(KEY_ENDPOINTS.quotesLatest, {
+    const { data } = await this.http.get(KEY_ENDPOINTS.quotesLatest, {
       params: { symbol: symbol.toUpperCase(), convert: "USD" },
     });
-    return data;
+    return this.normalizeQuotes(data);
   }
 
   async getListingsLatest(limit = 10): Promise<ListingsLatestResponse> {

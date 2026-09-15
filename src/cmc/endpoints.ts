@@ -14,7 +14,7 @@ export const ENDPOINTS = {
 
 /** Classic Pro API paths (same resources, key auth). */
 export const KEY_ENDPOINTS = {
-  quotesLatest: "/v2/cryptocurrency/quotes/latest",
+  quotesLatest: "/v1/cryptocurrency/quotes/latest",
   listingsLatest: "/v1/cryptocurrency/listings/latest",
   // DEX paths vary by plan; x402 paths are preferred when paying per call.
   dexSearch: "/v1/dex/search",
