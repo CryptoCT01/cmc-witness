@@ -66,26 +66,6 @@
       <button class="help-btn top-help" type="button" id="allowHelpBtn" title="What is ALLOW?" aria-label="What is ALLOW">?</button>
 
       <div class="hero-stats" id="kpiStrip">
-        <button type="button" class="hs gold kpi-tap" data-kpi="mcap" title="Total crypto market cap">
-          <div class="hs-l">Mcap</div>
-          <div class="hs-v" id="mkMcap">—</div>
-        </button>
-        <button type="button" class="hs cyan kpi-tap" data-kpi="vol" title="24h volume">
-          <div class="hs-l">Vol 24h</div>
-          <div class="hs-v" id="mkVol">—</div>
-        </button>
-        <button type="button" class="hs kpi-tap" data-kpi="btcd" title="BTC dominance">
-          <div class="hs-l">BTC.D</div>
-          <div class="hs-v" id="mkBtcD">—</div>
-        </button>
-        <button type="button" class="hs kpi-tap" data-kpi="fg" title="Fear &amp; Greed">
-          <div class="hs-l">F&amp;G</div>
-          <div class="hs-v" id="mkFgVal">—</div>
-        </button>
-        <button type="button" class="hs gold kpi-tap" data-kpi="alt" title="Altcoin Season">
-          <div class="hs-l">Altseason</div>
-          <div class="hs-v" id="mkAlt">—</div>
-        </button>
         <div class="hs pnl-up" title="Duel allows"><div class="hs-l">Allows</div><div class="hs-v" id="kpiAllow">0</div></div>
         <div class="hs" style="border-color:rgba(240,160,48,.28)" title="Duel cautions"><div class="hs-l">Caution</div><div class="hs-v" id="kpiCaution" style="color:var(--amber)">0</div></div>
         <div class="hs pnl-dn" title="Duel blocks"><div class="hs-l">Blocks</div><div class="hs-v" id="kpiBlock">0</div></div>
@@ -115,9 +95,50 @@
       </div>
     </div>
 
-    <!-- Main viewport grid: 3×2 -->
+    <!-- Market strip — always-on Pro KPIs from ab588e3 -->
+    <section class="market-strip" id="marketStrip" aria-label="CMC Pro market KPIs">
+      <button type="button" class="mk kpi-tap" data-kpi="mcap" title="Total crypto market cap">
+        <div class="mk-l">Total mcap</div>
+        <div class="mk-v gold" id="mkMcap">—</div>
+        <div class="mk-s">CMC global</div>
+      </button>
+      <button type="button" class="mk kpi-tap" data-kpi="vol" title="24h volume">
+        <div class="mk-l">24h volume</div>
+        <div class="mk-v cyan" id="mkVol">—</div>
+        <div class="mk-s">USD · reported</div>
+      </button>
+      <button type="button" class="mk kpi-tap" data-kpi="btcd" title="BTC dominance">
+        <div class="mk-l">BTC.D</div>
+        <div class="mk-v" id="mkBtcD">—</div>
+        <div class="mk-s">BTC dominance</div>
+      </button>
+      <div class="mk" title="ETH dominance">
+        <div class="mk-l">ETH.D</div>
+        <div class="mk-v" id="mkEthD">—</div>
+        <div class="mk-s">ETH dominance</div>
+      </div>
+      <button type="button" class="mk fg-gauge kpi-tap" data-kpi="fg" title="Fear &amp; Greed Index">
+        <div class="mk-l">Fear &amp; Greed</div>
+        <div class="fg-row">
+          <div class="fg-ring" id="fgRing" style="--fg:50">
+            <span id="mkFgVal">—</span>
+          </div>
+          <div>
+            <div class="mk-v mk-fg-class" id="mkFgClass">—</div>
+            <div class="mk-s">CMC v3 index</div>
+          </div>
+        </div>
+      </button>
+      <button type="button" class="mk kpi-tap" data-kpi="alt" title="Altcoin Season">
+        <div class="mk-l">Altcoin Season</div>
+        <div class="mk-v gold" id="mkAlt">—</div>
+        <div class="mk-s" id="mkAltSub">index · CMC</div>
+      </button>
+    </section>
+
+    <!-- Main viewport grid -->
     <section class="main-grid" aria-label="Market floor panels">
-      <!-- Gate -->
+      <!-- Gate — spans 2 rows -->
       <article class="panel us gate-panel">
         <div class="ph">
           <div class="ph-l">
@@ -159,45 +180,52 @@
           </div>
 
           <div class="reasons-wrap">
-            <div class="rw-h">Reasons</div>
+            <div class="rw-h">Reasons <span class="rw-sub">CMC-observed only</span></div>
             <ul class="reasons" id="reasonsList"></ul>
           </div>
         </div>
       </article>
 
-      <!-- Gainers | Losers -->
-      <article class="panel mkt movers-panel">
+      <!-- Gainers — always on -->
+      <article class="panel mkt gainers-panel">
         <div class="ph">
           <div class="ph-l">
             <span class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>
             <div>
-              <div class="ph-t" style="color:var(--fg)">Movers</div>
-              <div class="ph-s">24h · click → drawer</div>
+              <div class="ph-t" style="color:var(--green)">Gainers</div>
+              <div class="ph-s">Top 24h · Pro</div>
             </div>
-          </div>
-          <div class="tabs" role="tablist">
-            <button type="button" class="tab on" data-tab="gainers" role="tab">Gainers</button>
-            <button type="button" class="tab" data-tab="losers" role="tab">Losers</button>
           </div>
         </div>
         <div class="panel-body tight">
-          <div class="tab-pane on" id="pane-gainers">
-            <table class="mkt-table">
-              <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
-              <tbody id="gainersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
-            </table>
-          </div>
-          <div class="tab-pane" id="pane-losers" hidden>
-            <table class="mkt-table">
-              <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
-              <tbody id="losersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
-            </table>
-          </div>
+          <table class="mkt-table">
+            <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
+            <tbody id="gainersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+          </table>
         </div>
       </article>
 
-      <!-- Trending | Visited -->
-      <article class="panel mkt trend-panel">
+      <!-- Losers — always on -->
+      <article class="panel mkt losers-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot" style="background:var(--red);box-shadow:0 0 8px var(--red)"></span>
+            <div>
+              <div class="ph-t" style="color:var(--red)">Losers</div>
+              <div class="ph-s">Worst 24h · Pro</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body tight">
+          <table class="mkt-table">
+            <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
+            <tbody id="losersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+
+      <!-- Heat: trending + visited both visible -->
+      <article class="panel mkt heat-panel">
         <div class="ph">
           <div class="ph-l">
             <span class="dot c"></span>
@@ -206,16 +234,14 @@
               <div class="ph-s">Trending · visited</div>
             </div>
           </div>
-          <div class="tabs" role="tablist">
-            <button type="button" class="tab on" data-tab="trending" role="tab">Trending</button>
-            <button type="button" class="tab" data-tab="visited" role="tab">Visited</button>
-          </div>
         </div>
-        <div class="panel-body tight">
-          <div class="tab-pane on" id="pane-trending">
+        <div class="panel-body tight dual-lists">
+          <div class="dual-col">
+            <div class="list-h">Trending</div>
             <ul class="coin-list" id="trendingList"><li class="empty">Loading…</li></ul>
           </div>
-          <div class="tab-pane" id="pane-visited" hidden>
+          <div class="dual-col">
+            <div class="list-h">Most visited</div>
             <ul class="coin-list" id="visitedList"><li class="empty">Loading…</li></ul>
           </div>
         </div>
@@ -235,12 +261,12 @@
         <div class="panel-body tight">
           <div class="list-h">New listings</div>
           <div class="new-strip" id="newStrip"><span class="empty">Loading…</span></div>
-          <div class="list-h" style="margin-top:4px">Categories</div>
-          <ul class="coin-list" id="catList"><li class="empty">Loading…</li></ul>
+          <div class="list-h" style="margin-top:2px">Categories</div>
+          <ul class="coin-list cat-scroll" id="catList"><li class="empty">Loading…</li></ul>
         </div>
       </article>
 
-      <!-- Evidence / dossier compact -->
+      <!-- Dossier -->
       <article class="panel core dossier-panel">
         <div class="ph">
           <div class="ph-l">
@@ -269,7 +295,7 @@
         </div>
       </article>
 
-      <!-- Ops: receipt + duel chips -->
+      <!-- Ops -->
       <article class="panel cr ops-panel">
         <div class="ph">
           <div class="ph-l">
@@ -359,12 +385,6 @@
     <div class="chain-track" id="chainTrack"></div>
     <span id="chainHint" hidden></span>
   </div>
-
-  <!-- Hidden KPI extras -->
-  <span id="mkEthD" hidden></span>
-  <span id="mkFgClass" hidden></span>
-  <span id="mkAltSub" hidden></span>
-  <span id="fgRing" hidden style="--fg:50"></span>
 
   <div id="toast" role="status"></div>
   <script type="module" src="./app.js"></script>

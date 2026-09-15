@@ -626,8 +626,9 @@ function coinListItems(list) {
   return list
     .map((c) => {
       const pct = c.percent_change_24h;
+      const name = c.name ? ` <span class="nm">${escapeHtml(c.name)}</span>` : "";
       return `<li data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(pct ?? "")}">
-        <span class="n">${escapeHtml(c.symbol)}</span>
+        <span class="n">${escapeHtml(c.symbol)}${name}</span>
         <span class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</span>
       </li>`;
     })
