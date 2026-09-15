@@ -85,5 +85,13 @@ export interface GateInput {
 }
 
 export function extractUsd(asset: CryptoAsset): UsdQuote {
-  return asset.quote.USD;
+  const q = asset.quote as unknown;
+  if (q && typeof q === "object" && !Array.isArray(q) && "USD" in q && (q as { USD: UsdQuote }).USD) {
+    return (q as { USD: UsdQuote }).USD;
+  }
+  if (Array.isArray(q)) {
+    const usd = q.find((row) => (row as { symbol?: string })?.symbol === "USD") as UsdQuote | undefined;
+    if (usd?.price != null) return usd;
+  }
+  throw new Error(`Missing USD quote for ${asset.symbol ?? asset.id}`);
 }
