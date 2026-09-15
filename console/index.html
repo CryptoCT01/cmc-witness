@@ -29,32 +29,26 @@
     <div class="splash-title"><span>CMC Witness</span></div>
     <p class="splash-brand">Pre-trade Gate · Pro Market Floor</p>
     <p class="splash-sub">
-      Free sites already show BTC’s price. <b>Witness is a pre-trade referee</b>: other agents must clear
-      <code>before_you_trade</code> before sizing. The console now also streams a <b>CMC Pro market floor</b>
-      (global mcap, Fear&amp;Greed, gainers/losers, trending) so the gate sits in live market context —
-      not alone. Gate ≠ buy. Pro panels = market context from CMC.
+      Free sites show BTC’s price. <b>Witness is a pre-trade referee</b>: agents clear
+      <code>before_you_trade</code> before sizing. Live <b>CMC Pro floor</b> context —
+      gainers, Fear&amp;Greed, trending — sits beside the gate. Gate ≠ buy.
     </p>
     <div class="splash-pills">
       <span class="sp g">MCP</span>
       <span class="sp c">x402</span>
       <span class="sp g">Market Receipts</span>
-      <span class="sp c">Pro market floor</span>
+      <span class="sp c">Pro floor</span>
       <span class="sp g">Pre-trade gate</span>
     </div>
     <button class="enter" id="enterBtn" type="button">Enter the floor</button>
     <div class="splash-trust">Catches ticker collisions · low-liq / rug-like tokens · never invents metrics</div>
   </div>
 
-  <!-- ===== FLOOR ===== -->
+  <!-- ===== FLOOR (100vh, no page scroll) ===== -->
   <div id="floor">
     <div class="mock-banner" id="floorBanner">
       <span class="dot"></span>
       <span id="bannerText">Loading CMC Pro market floor…</span>
-    </div>
-
-    <div class="info-strip" id="infoStrip">
-      <b>Gate ≠ buy</b> — you’re clearing a pre-trade referee + receipt. <b>Pro panels = market context</b> from CMC
-      (global metrics, Fear&amp;Greed, trending, listings). Never invents RSI or synthetic indicators.
     </div>
 
     <header class="top">
@@ -65,20 +59,41 @@
         </svg>
         <div>
           <h1><i>CMC Witness</i></h1>
-          <small>Pre-trade Gate · Pro Market Floor</small>
+          <small>Pre-trade Gate · Pro Floor</small>
         </div>
       </div>
       <div class="mode-pill" id="modePill">● <b>…</b></div>
-      <div class="hero-stats">
-        <div class="hs gold"><div class="hs-l">Receipts chained</div><div class="hs-v" id="kpiReceipts">0</div></div>
-        <div class="hs pnl-up"><div class="hs-l">Allows</div><div class="hs-v" id="kpiAllow">0</div></div>
-        <div class="hs" style="border-color:rgba(240,160,48,.28)"><div class="hs-l">Cautions</div><div class="hs-v" id="kpiCaution" style="color:var(--amber)">0</div></div>
-        <div class="hs pnl-dn"><div class="hs-l">Blocks</div><div class="hs-v" id="kpiBlock">0</div></div>
-        <div class="hs cyan"><div class="hs-l">Last decision</div><div class="hs-v" id="kpiLast">—</div></div>
-        <div class="hs" id="usdcNoteBox" hidden><div class="hs-l">x402 USDC</div><div class="hs-v" id="kpiUsdc" style="color:var(--gold);font-size:11px">pay CMC API</div></div>
+      <button class="help-btn top-help" type="button" id="allowHelpBtn" title="What is ALLOW?" aria-label="What is ALLOW">?</button>
+
+      <div class="hero-stats" id="kpiStrip">
+        <button type="button" class="hs gold kpi-tap" data-kpi="mcap" title="Total crypto market cap">
+          <div class="hs-l">Mcap</div>
+          <div class="hs-v" id="mkMcap">—</div>
+        </button>
+        <button type="button" class="hs cyan kpi-tap" data-kpi="vol" title="24h volume">
+          <div class="hs-l">Vol 24h</div>
+          <div class="hs-v" id="mkVol">—</div>
+        </button>
+        <button type="button" class="hs kpi-tap" data-kpi="btcd" title="BTC dominance">
+          <div class="hs-l">BTC.D</div>
+          <div class="hs-v" id="mkBtcD">—</div>
+        </button>
+        <button type="button" class="hs kpi-tap" data-kpi="fg" title="Fear &amp; Greed">
+          <div class="hs-l">F&amp;G</div>
+          <div class="hs-v" id="mkFgVal">—</div>
+        </button>
+        <button type="button" class="hs gold kpi-tap" data-kpi="alt" title="Altcoin Season">
+          <div class="hs-l">Altseason</div>
+          <div class="hs-v" id="mkAlt">—</div>
+        </button>
+        <div class="hs pnl-up" title="Duel allows"><div class="hs-l">Allows</div><div class="hs-v" id="kpiAllow">0</div></div>
+        <div class="hs" style="border-color:rgba(240,160,48,.28)" title="Duel cautions"><div class="hs-l">Caution</div><div class="hs-v" id="kpiCaution" style="color:var(--amber)">0</div></div>
+        <div class="hs pnl-dn" title="Duel blocks"><div class="hs-l">Blocks</div><div class="hs-v" id="kpiBlock">0</div></div>
+        <div class="hs cyan" title="Last gate decision"><div class="hs-l">Last</div><div class="hs-v" id="kpiLast">—</div></div>
+        <div class="hs" id="usdcNoteBox" hidden><div class="hs-l">x402</div><div class="hs-v" id="kpiUsdc" style="color:var(--gold);font-size:11px">USDC</div></div>
         <div class="clock-box">
           <div class="t" id="clk">00:00:00</div>
-          <div class="z">UTC · terminal</div>
+          <div class="z">UTC · floor</div>
         </div>
       </div>
     </header>
@@ -87,11 +102,11 @@
       <span class="sess-chip gold" id="sessMode">Mode · …</span>
       <span class="sess-chip cyan" id="sessFloor">Floor · loading</span>
       <span class="sess-chip on">MCP · before_you_trade</span>
-      <span class="sess-chip">Receipt chain · live</span>
-      <span class="sess-chip shock" id="sessHint">Gate ≠ buy · Pro = context</span>
+      <span class="sess-chip" id="kpiReceiptsChip">Receipts · <b id="kpiReceipts">0</b></span>
+      <span class="sess-chip shock">Gate ≠ buy · Pro = context</span>
       <div class="toolbar-inline">
         <label class="act-mini">
-          Load report
+          Load
           <input type="file" id="fileInput" accept="application/json,.json" hidden />
         </label>
         <button class="act-mini" id="reloadBtn" type="button">Reload</button>
@@ -100,158 +115,35 @@
       </div>
     </div>
 
-    <!-- ===== MARKET STRIP / KPIs ===== -->
-    <section class="market-strip" id="marketStrip" aria-label="CMC Pro market KPIs">
-      <div class="mk" title="Total crypto market cap (CMC global metrics)">
-        <div class="mk-l">Total crypto mcap</div>
-        <div class="mk-v gold" id="mkMcap">—</div>
-        <div class="mk-s">CMC global-metrics</div>
-      </div>
-      <div class="mk" title="24h total volume">
-        <div class="mk-l">24h volume</div>
-        <div class="mk-v cyan" id="mkVol">—</div>
-        <div class="mk-s">USD · reported</div>
-      </div>
-      <div class="mk">
-        <div class="mk-l">BTC.D</div>
-        <div class="mk-v" id="mkBtcD">—</div>
-        <div class="mk-s">BTC dominance</div>
-      </div>
-      <div class="mk">
-        <div class="mk-l">ETH.D</div>
-        <div class="mk-v" id="mkEthD">—</div>
-        <div class="mk-s">ETH dominance</div>
-      </div>
-      <div class="mk fg-gauge" title="Fear &amp; Greed Index">
-        <div class="mk-l">Fear &amp; Greed</div>
-        <div class="fg-row">
-          <div class="fg-ring" id="fgRing" style="--fg:50">
-            <span id="mkFgVal">—</span>
-          </div>
-          <div>
-            <div class="mk-v" id="mkFgClass" style="font-size:13px">—</div>
-            <div class="mk-s">CMC v3 index</div>
-          </div>
-        </div>
-      </div>
-      <div class="mk" title="Altcoin Season Index">
-        <div class="mk-l">Altcoin Season</div>
-        <div class="mk-v gold" id="mkAlt">—</div>
-        <div class="mk-s" id="mkAltSub">index · CMC</div>
-      </div>
-    </section>
-
-    <!-- ===== MARKET PANELS ===== -->
-    <section class="market-grid" aria-label="CMC Pro market panels">
-      <article class="panel mkt">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>
-            <div>
-              <div class="ph-t" style="color:var(--green)">Gainers</div>
-              <div class="ph-s">Top 24h movers · Pro</div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-body tight">
-          <table class="mkt-table" id="gainersTable">
-            <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
-            <tbody id="gainersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="panel mkt">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot" style="background:var(--red);box-shadow:0 0 8px var(--red)"></span>
-            <div>
-              <div class="ph-t" style="color:var(--red)">Losers</div>
-              <div class="ph-s">Worst 24h · listings sort</div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-body tight">
-          <table class="mkt-table" id="losersTable">
-            <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
-            <tbody id="losersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="panel mkt">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot c"></span>
-            <div>
-              <div class="ph-t" style="color:var(--cyan)">Trending</div>
-              <div class="ph-s">Hot + most visited</div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-body tight dual-lists">
-          <div>
-            <div class="list-h">Trending now</div>
-            <ul class="coin-list" id="trendingList"><li class="empty">Loading…</li></ul>
-          </div>
-          <div>
-            <div class="list-h">Most visited</div>
-            <ul class="coin-list" id="visitedList"><li class="empty">Loading…</li></ul>
-          </div>
-        </div>
-      </article>
-
-      <article class="panel mkt">
+    <!-- Main viewport grid: 3×2 -->
+    <section class="main-grid" aria-label="Market floor panels">
+      <!-- Gate -->
+      <article class="panel us gate-panel">
         <div class="ph">
           <div class="ph-l">
             <span class="dot g"></span>
             <div>
-              <div class="ph-t">New + categories</div>
-              <div class="ph-s">Listings · sector movers</div>
+              <div class="ph-t">Live gate</div>
+              <div class="ph-s">Symbol → verdict</div>
             </div>
           </div>
-        </div>
-        <div class="panel-body tight">
-          <div class="list-h">New listings</div>
-          <div class="new-strip" id="newStrip"><span class="empty">Loading…</span></div>
-          <div class="list-h" style="margin-top:8px">Categories · top movers</div>
-          <ul class="coin-list" id="catList"><li class="empty">Loading…</li></ul>
-        </div>
-      </article>
-    </section>
-
-    <section class="triad">
-      <!-- LEFT: Live gate -->
-      <article class="panel us">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot g"></span>
-            <div>
-              <div class="ph-t">Live check</div>
-              <div class="ph-s">Symbol / contract → Run gate</div>
-            </div>
-          </div>
-          <button class="help-btn" type="button" data-help="help-gate" aria-expanded="false">?</button>
-        </div>
-        <div class="help-card" id="help-gate" hidden>
-          Type a ticker (BTC) or contract. The gate scores CMC evidence and returns ALLOW / CAUTION / BLOCK — the same call other bots must clear before sizing. When Pro key is present, performance stats + OHLCV spark attach below.
+          <button class="help-btn" type="button" data-modal="help-gate" aria-label="Gate help">?</button>
         </div>
         <div class="panel-body gate-body">
           <form class="gate-form" id="gateForm">
-            <label class="gf-lab" for="symInput">Symbol or contract</label>
             <div class="gf-row">
               <input id="symInput" name="symbol" type="text" placeholder="BTC · ETH · RUG · 0x…" autocomplete="off" spellcheck="false" />
-              <button class="run-btn" type="submit" id="runGateBtn">Run gate</button>
+              <button class="run-btn" type="submit" id="runGateBtn">Run</button>
             </div>
-            <p class="gf-hint" id="gateHint">Uses Pro key when set (auto mode). Hit <code>/api/check?symbol=</code> or CLI.</p>
+            <p class="gf-hint" id="gateHint">Pro key when set · <code>/api/check</code></p>
           </form>
 
           <div class="verdict-block" id="verdictBlock" data-decision="">
             <div class="vb-top">
               <div>
-                <div class="vb-kicker">Gate verdict</div>
+                <div class="vb-kicker">Verdict</div>
                 <div class="vb-word" id="verdictWord">STANDBY</div>
-                <div class="vb-sub" id="verdictSub">Awaiting symbol or duel round</div>
+                <div class="vb-sub" id="verdictSub">Awaiting symbol</div>
               </div>
               <div class="score-pill">
                 <div class="sp-n" id="scoreValue">—</div>
@@ -262,170 +154,217 @@
           </div>
 
           <div class="enrich-block" id="enrichBlock" hidden>
-            <div class="list-h">Price performance · Pro</div>
             <div class="perf-grid" id="perfGrid"></div>
-            <div class="list-h" style="margin-top:6px">OHLCV spark · 14d close</div>
-            <svg class="spark" id="sparkSvg" viewBox="0 0 200 40" preserveAspectRatio="none" aria-label="OHLCV sparkline"></svg>
+            <svg class="spark" id="sparkSvg" viewBox="0 0 200 36" preserveAspectRatio="none" aria-label="OHLCV sparkline"></svg>
           </div>
 
           <div class="reasons-wrap">
-            <div class="rw-h">Reasons <span class="rw-sub">from CMC-observed fields only</span></div>
+            <div class="rw-h">Reasons</div>
             <ul class="reasons" id="reasonsList"></ul>
           </div>
         </div>
       </article>
 
-      <!-- CENTER: Verdict focus + dossier -->
-      <article class="panel core">
+      <!-- Gainers | Losers -->
+      <article class="panel mkt movers-panel">
         <div class="ph">
           <div class="ph-l">
-            <span class="dot ok"></span>
+            <span class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>
             <div>
-              <div class="ph-t" style="color:#e8edf4">Dossier evidence</div>
-              <div class="ph-s">Endpoint · credits · why used</div>
+              <div class="ph-t" style="color:var(--fg)">Movers</div>
+              <div class="ph-s">24h · click → drawer</div>
             </div>
           </div>
-          <button class="help-btn" type="button" data-help="help-dossier" aria-expanded="false">?</button>
-        </div>
-        <div class="help-card" id="help-dossier" hidden>
-          Each row is a real CMC API call on the receipt — quotes, listings, optional DEX search. Credits and timestamps prove what the gate saw; Witness never invents RSI. Fear&amp;Greed lives on the market floor panel, not on the receipt.
-        </div>
-        <div class="panel-body dossier-body">
-          <div class="case-strip">
-            <span class="cs-idx" id="caseIdx">ROUND —</span>
-            <span class="cs-line" id="recklessLine">Load a duel report or run the gate.</span>
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab on" data-tab="gainers" role="tab">Gainers</button>
+            <button type="button" class="tab" data-tab="losers" role="tab">Losers</button>
           </div>
-          <div class="ev-table-wrap">
-            <table class="ev-table" id="evidenceTable">
-              <thead>
-                <tr>
-                  <th>Endpoint</th>
-                  <th>Credits</th>
-                  <th>Timestamp</th>
-                  <th>Why used</th>
-                </tr>
-              </thead>
-              <tbody id="evidenceBody">
-                <tr><td colspan="4" class="empty">No evidence yet.</td></tr>
-              </tbody>
+        </div>
+        <div class="panel-body tight">
+          <div class="tab-pane on" id="pane-gainers">
+            <table class="mkt-table">
+              <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
+              <tbody id="gainersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
             </table>
           </div>
-          <div class="product-blurb">
-            <b>What this product is.</b> Other agents/bots clear <code>before_you_trade</code> before sizing.
-            Witness returns ALLOW / CAUTION / BLOCK, chains a Market Receipt, and can pay CMC via x402 USDC
-            for Pro market data + the gate pipeline — catching ticker collisions and low-liq / rug-like tokens.
-            The market floor above is live Pro context so the gate isn’t alone on an empty dashboard.
+          <div class="tab-pane" id="pane-losers" hidden>
+            <table class="mkt-table">
+              <thead><tr><th>Asset</th><th>Price</th><th>24h</th></tr></thead>
+              <tbody id="losersBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+            </table>
           </div>
         </div>
       </article>
 
-      <!-- RIGHT: quick stats / CLI -->
-      <article class="panel cr">
+      <!-- Trending | Visited -->
+      <article class="panel mkt trend-panel">
         <div class="ph">
           <div class="ph-l">
             <span class="dot c"></span>
             <div>
-              <div class="ph-t">How to run live</div>
-              <div class="ph-s">CLI · MCP · Pro floor</div>
+              <div class="ph-t" style="color:var(--cyan)">Heat</div>
+              <div class="ph-s">Trending · visited</div>
             </div>
           </div>
-          <button class="help-btn" type="button" data-help="help-live" aria-expanded="false">?</button>
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab on" data-tab="trending" role="tab">Trending</button>
+            <button type="button" class="tab" data-tab="visited" role="tab">Visited</button>
+          </div>
         </div>
-        <div class="help-card" id="help-live" hidden>
-          Market floor hits <code>/api/market-floor</code> (cached ~55s). Gate uses auto mode (key / x402 / fixture). Set <code>CMC_API_KEY</code> in <code>.env</code> — never commit it.
-        </div>
-        <div class="panel-body live-body">
-          <div class="cli-block">
-            <div class="cli-h">Console APIs</div>
-            <pre class="cli">GET /api/market-floor
-GET /api/check?symbol=BTC
-GET /api/receipts</pre>
+        <div class="panel-body tight">
+          <div class="tab-pane on" id="pane-trending">
+            <ul class="coin-list" id="trendingList"><li class="empty">Loading…</li></ul>
           </div>
-          <div class="cli-block">
-            <div class="cli-h">Offline (fixture)</div>
-            <pre class="cli">pnpm witness duel --fixture
-pnpm witness check BTC --fixture
-pnpm console</pre>
+          <div class="tab-pane" id="pane-visited" hidden>
+            <ul class="coin-list" id="visitedList"><li class="empty">Loading…</li></ul>
           </div>
-          <div class="cli-block">
-            <div class="cli-h">Pay CMC (x402 USDC)</div>
-            <pre class="cli">pnpm witness check ETH --x402
-# pays for Pro CMC + gate
-# NOT “buying the BTC number”</pre>
-          </div>
-          <div class="meta-line" id="reportMeta">Offline fixture ready</div>
-          <div class="meta-line" id="floorMeta">Floor · —</div>
         </div>
       </article>
-    </section>
 
-    <section class="lower">
-      <article class="panel cinema">
+      <!-- New + categories -->
+      <article class="panel mkt listings-panel">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">New + sectors</div>
+              <div class="ph-s">Listings · categories</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body tight">
+          <div class="list-h">New listings</div>
+          <div class="new-strip" id="newStrip"><span class="empty">Loading…</span></div>
+          <div class="list-h" style="margin-top:4px">Categories</div>
+          <ul class="coin-list" id="catList"><li class="empty">Loading…</li></ul>
+        </div>
+      </article>
+
+      <!-- Evidence / dossier compact -->
+      <article class="panel core dossier-panel">
         <div class="ph">
           <div class="ph-l">
             <span class="dot ok"></span>
             <div>
-              <div class="ph-t" style="color:#e8edf4">Receipt chain</div>
-              <div class="ph-s" id="chainHint">prev_hash trail · scrub to inspect</div>
+              <div class="ph-t" style="color:#e8edf4">Dossier</div>
+              <div class="ph-s" id="caseIdx">ROUND —</div>
             </div>
           </div>
-          <button class="help-btn" type="button" data-help="help-chain" aria-expanded="false">?</button>
+          <button class="help-btn" type="button" data-modal="help-dossier" aria-label="Dossier help">?</button>
         </div>
-        <div class="help-card" id="help-chain" hidden>
-          Every gate call appends a Market Receipt linked by prev_hash. Scrub the timeline to prove what CMC said at that height — tamper-evident for other bots and judges.
-        </div>
-        <div class="panel-body chain-body">
-          <div class="chain-scrub">
-            <input type="range" id="chainScrub" min="0" max="0" value="0" />
-            <div class="chain-focus" id="chainFocus">No chain data.</div>
+        <div class="panel-body dossier-body">
+          <div class="case-strip">
+            <span class="cs-line" id="recklessLine">Load a duel or run the gate.</span>
           </div>
-          <div class="chain-track" id="chainTrack"></div>
+          <div class="ev-table-wrap">
+            <table class="ev-table" id="evidenceTable">
+              <thead>
+                <tr><th>Endpoint</th><th>Credits</th><th>Why</th></tr>
+              </thead>
+              <tbody id="evidenceBody">
+                <tr><td colspan="3" class="empty">No evidence yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </article>
 
-      <article class="panel duel-panel">
+      <!-- Ops: receipt + duel chips -->
+      <article class="panel cr ops-panel">
         <div class="ph">
           <div class="ph-l">
-            <span class="dot" style="background:#ff5d6c;box-shadow:0 0 8px #ff5d6c"></span>
+            <span class="dot c"></span>
             <div>
-              <div class="ph-t" style="color:#ff8a94">Duel theatre</div>
-              <div class="ph-s">Reckless Agent vs Witness</div>
+              <div class="ph-t">Ops</div>
+              <div class="ph-s">Chain · duel · CLI</div>
             </div>
-          </div>
-          <div class="ph-acts">
-            <button class="act-mini" id="prevBtn" type="button">←</button>
-            <button class="act-mini" id="nextBtn" type="button">→</button>
-            <button class="help-btn" type="button" data-help="help-duel" aria-expanded="false">?</button>
           </div>
         </div>
-        <div class="help-card" id="help-duel" hidden>
-          Scripted reckless proposals hit the same gate. Step through rounds or press Theatre — Witness ALLOW/CAUTION/BLOCK is what a sizing bot would receive.
-        </div>
-        <div class="panel-body duel-body">
-          <div class="duel-stage" id="duelStage">
-            <div class="actor reckless-actor">
-              <p class="actor-label">Reckless Agent</p>
-              <div class="bubble" id="proposeBubble">—</div>
-            </div>
-            <div class="vs-chip">VS</div>
-            <div class="actor witness-actor">
-              <p class="actor-label">Witness</p>
-              <div class="bubble judgment" id="judgeBubble">—</div>
-            </div>
+        <div class="panel-body ops-body">
+          <button type="button" class="ops-chip" id="openChainBtn">
+            <span class="oc-k">Receipt chain</span>
+            <span class="oc-v" id="chainChipVal">0 linked · open →</span>
+          </button>
+          <button type="button" class="ops-chip duel" id="openDuelBtn">
+            <span class="oc-k">Duel theatre</span>
+            <span class="oc-v" id="duelChipVal">Reckless vs Witness →</span>
+          </button>
+          <div class="ops-meta" id="reportMeta">Offline fixture ready</div>
+          <div class="ops-meta" id="floorMeta">Floor · —</div>
+          <div class="cli-mini">
+            <code>GET /api/market-floor</code>
+            <code>GET /api/check?symbol=BTC</code>
+            <code>GET /api/receipts</code>
           </div>
-          <div class="stepper" id="stepper"></div>
-          <div class="feed" id="feed"></div>
         </div>
       </article>
     </section>
 
     <footer class="foot">
-      <span class="fc hash">CMC Witness · Pre-trade Gate</span>
+      <span class="fc hash">CMC Witness</span>
       <span class="fc">Never invents metrics</span>
       <span class="fc ag">Pro market floor</span>
       <span class="fc">#BuildwithCMC</span>
     </footer>
   </div>
+
+  <!-- Slide-over drawer -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="dh-k" id="drawerKicker">Detail</div>
+        <div class="dh-t" id="drawerTitle">—</div>
+      </div>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+  <div id="drawerScrim" class="scrim" hidden></div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" aria-hidden="true" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="mh-t" id="modalTitle">Help</div>
+        <button type="button" class="drawer-close" id="modalClose" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+  <div id="modalScrim" class="scrim" hidden></div>
+
+  <!-- Hidden duel stage (used by theatre; surfaced in drawer) -->
+  <div id="duelMount" hidden>
+    <div class="duel-stage" id="duelStage">
+      <div class="actor reckless-actor">
+        <p class="actor-label">Reckless Agent</p>
+        <div class="bubble" id="proposeBubble">—</div>
+      </div>
+      <div class="vs-chip">VS</div>
+      <div class="actor witness-actor">
+        <p class="actor-label">Witness</p>
+        <div class="bubble judgment" id="judgeBubble">—</div>
+      </div>
+    </div>
+    <div class="duel-nav">
+      <button class="act-mini" id="prevBtn" type="button">←</button>
+      <div class="stepper" id="stepper"></div>
+      <button class="act-mini" id="nextBtn" type="button">→</button>
+    </div>
+    <div class="feed" id="feed"></div>
+    <div class="chain-scrub">
+      <input type="range" id="chainScrub" min="0" max="0" value="0" />
+      <div class="chain-focus" id="chainFocus">No chain data.</div>
+    </div>
+    <div class="chain-track" id="chainTrack"></div>
+    <span id="chainHint" hidden></span>
+  </div>
+
+  <!-- Hidden KPI extras -->
+  <span id="mkEthD" hidden></span>
+  <span id="mkFgClass" hidden></span>
+  <span id="mkAltSub" hidden></span>
+  <span id="fgRing" hidden style="--fg:50"></span>
 
   <div id="toast" role="status"></div>
   <script type="module" src="./app.js"></script>

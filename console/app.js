@@ -1,4 +1,4 @@
-/** CMC Witness · Pre-trade Gate + Pro Market Floor console */
+/** CMC Witness · Pre-trade Gate + Pro Market Floor — viewport-locked floor */
 
 const els = {
   splash: document.getElementById("splash"),
@@ -65,6 +65,23 @@ const els = {
   enrichBlock: document.getElementById("enrichBlock"),
   perfGrid: document.getElementById("perfGrid"),
   sparkSvg: document.getElementById("sparkSvg"),
+  drawer: document.getElementById("drawer"),
+  drawerScrim: document.getElementById("drawerScrim"),
+  drawerClose: document.getElementById("drawerClose"),
+  drawerKicker: document.getElementById("drawerKicker"),
+  drawerTitle: document.getElementById("drawerTitle"),
+  drawerBody: document.getElementById("drawerBody"),
+  modal: document.getElementById("modal"),
+  modalScrim: document.getElementById("modalScrim"),
+  modalClose: document.getElementById("modalClose"),
+  modalTitle: document.getElementById("modalTitle"),
+  modalBody: document.getElementById("modalBody"),
+  openChainBtn: document.getElementById("openChainBtn"),
+  openDuelBtn: document.getElementById("openDuelBtn"),
+  chainChipVal: document.getElementById("chainChipVal"),
+  duelChipVal: document.getElementById("duelChipVal"),
+  duelMount: document.getElementById("duelMount"),
+  allowHelpBtn: document.getElementById("allowHelpBtn"),
 };
 
 const state = {
@@ -76,6 +93,26 @@ const state = {
   theatreTimer: null,
   liveResult: null,
   marketFloor: null,
+  drawerMode: null,
+};
+
+const HELP = {
+  "help-gate": {
+    title: "Live gate",
+    body: `<p>Type a ticker (<b>BTC</b>) or contract. The gate scores CMC evidence and returns <b>ALLOW / CAUTION / BLOCK</b> — the same call other bots must clear before sizing.</p><p>When a Pro key is present, performance stats + OHLCV spark attach below.</p>`,
+  },
+  "help-dossier": {
+    title: "Dossier evidence",
+    body: `<p>Each row is a real CMC API call on the receipt — quotes, listings, optional DEX search. Credits and timestamps prove what the gate saw.</p><p>Witness <b>never invents RSI</b>. Fear&amp;Greed lives on the market floor KPIs, not on the receipt.</p>`,
+  },
+  allow: {
+    title: "What is ALLOW?",
+    body: `<p><b>Gate ≠ buy.</b> ALLOW / CAUTION / BLOCK is a pre-trade referee verdict other agents clear via <code>before_you_trade</code> before sizing.</p>
+<p><b>ALLOW</b> — CMC evidence looks liquid / identifiable enough to proceed (still not advice).</p>
+<p><b>CAUTION</b> — thin books, odd rank, or incomplete identity — size carefully or investigate more.</p>
+<p><b>BLOCK</b> — rug-like / unresolvable / dangerous collision — do not size.</p>
+<p>Pro panels (mcap, F&amp;G, movers) are <b>market context from CMC</b>, not the gate inventing indicators.</p>`,
+  },
 };
 
 function escapeHtml(s) {
@@ -130,6 +167,48 @@ function pctClass(n) {
   return Number(n) >= 0 ? "up" : "dn";
 }
 
+/* ===== Drawer / Modal ===== */
+function openDrawer({ kicker, title, bodyHtml, mode }) {
+  state.drawerMode = mode || null;
+  els.drawerKicker.textContent = kicker || "Detail";
+  els.drawerTitle.textContent = title || "—";
+  els.drawerBody.innerHTML = "";
+  if (typeof bodyHtml === "string") {
+    els.drawerBody.innerHTML = bodyHtml;
+  } else if (bodyHtml instanceof Node) {
+    els.drawerBody.appendChild(bodyHtml);
+  }
+  els.drawer.classList.add("open");
+  els.drawer.setAttribute("aria-hidden", "false");
+  els.drawerScrim.hidden = false;
+}
+
+function closeDrawer() {
+  els.drawer.classList.remove("open");
+  els.drawer.setAttribute("aria-hidden", "true");
+  els.drawerScrim.hidden = true;
+  // park duel mount back if it was moved
+  if (els.duelMount && !document.getElementById("duelMount")) {
+    document.body.appendChild(els.duelMount);
+  }
+  if (els.duelMount) els.duelMount.hidden = true;
+  state.drawerMode = null;
+}
+
+function openModal({ title, bodyHtml }) {
+  els.modalTitle.textContent = title || "Help";
+  els.modalBody.innerHTML = bodyHtml || "";
+  els.modal.hidden = false;
+  els.modal.setAttribute("aria-hidden", "false");
+  els.modalScrim.hidden = false;
+}
+
+function closeModal() {
+  els.modal.hidden = true;
+  els.modal.setAttribute("aria-hidden", "true");
+  els.modalScrim.hidden = true;
+}
+
 function enterFloor() {
   els.splash.classList.add("go");
   els.floor.classList.add("on");
@@ -174,7 +253,10 @@ function renderSummary(report) {
   els.modePill.innerHTML = `● <b>${escapeHtml(mode)}</b>`;
   els.sessMode.textContent = `Mode · ${mode.toLowerCase()}`;
   els.usdcNoteBox.hidden = mode !== "X402";
-  els.reportMeta.textContent = `${report.title ?? "Duel"} · ${report.created_at ?? ""} · ${s.total ?? (report.rounds ?? []).length} rounds · ${state.receipts.length} chained receipts`;
+  els.reportMeta.textContent = `${report.title ?? "Duel"} · ${s.total ?? (report.rounds ?? []).length} rounds · ${state.receipts.length} receipts`;
+  const n = (report.rounds ?? []).length;
+  els.chainChipVal.textContent = `${n} linked · open →`;
+  els.duelChipVal.textContent = n ? `${n} rounds · theatre →` : "Reckless vs Witness →";
 }
 
 function renderStepper(report) {
@@ -275,7 +357,7 @@ function renderEnrichment(data) {
     const pts = spark
       .map((v, i) => {
         const x = (i / Math.max(spark.length - 1, 1)) * 200;
-        const y = 36 - ((v - min) / span) * 32;
+        const y = 32 - ((v - min) / span) * 28;
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(" ");
@@ -284,7 +366,7 @@ function renderEnrichment(data) {
     els.sparkSvg.innerHTML = `
       <polyline fill="none" stroke="${stroke}" stroke-width="1.6" points="${pts}" />
       <polyline fill="${up ? "rgba(61,255,156,.12)" : "rgba(255,93,108,.12)"}" stroke="none"
-        points="0,40 ${pts} 200,40" />
+        points="0,36 ${pts} 200,36" />
     `;
   } else {
     els.sparkSvg.innerHTML = "";
@@ -319,15 +401,14 @@ function applyVerdictView({
 
   const rows = evidence ?? [];
   if (!rows.length) {
-    els.evidenceBody.innerHTML = `<tr><td colspan="4" class="empty">No evidence yet.</td></tr>`;
+    els.evidenceBody.innerHTML = `<tr><td colspan="3" class="empty">No evidence yet.</td></tr>`;
   } else {
     els.evidenceBody.innerHTML = rows
       .map(
         (e) => `<tr>
         <td>${escapeHtml(e.endpoint)}</td>
         <td>${escapeHtml(e.credit_count ?? "—")}</td>
-        <td>${escapeHtml(e.status_timestamp ?? "—")}</td>
-        <td style="font-family:var(--ui);color:var(--fg2)">${escapeHtml(e.used_for ?? "—")}</td>
+        <td style="font-family:var(--ui);color:var(--fg2)">${escapeHtml(e.used_for ?? e.status_timestamp ?? "—")}</td>
       </tr>`,
       )
       .join("");
@@ -346,7 +427,7 @@ function renderVerdict(round) {
     decision: round.decision,
     score: round.score ?? 0,
     symbol: round.proposed,
-    sub: `Pre-trade gate for ${round.proposed} · chain height ${round.chain_height ?? "—"}`,
+    sub: `Pre-trade gate for ${round.proposed} · height ${round.chain_height ?? "—"}`,
     caseIdx: `ROUND ${round.index ?? state.index + 1}`,
     recklessLine: round.reckless_line || "",
     reasons: round.reasons ?? [],
@@ -378,13 +459,15 @@ function renderChain(report) {
     els.chainTrack.innerHTML = `<div class="empty-note">Chain appears after a duel report.</div>`;
     els.chainFocus.textContent = "No chain data.";
     els.chainScrub.max = "0";
-    els.chainHint.textContent = "prev_hash trail · scrub to inspect";
+    if (els.chainHint) els.chainHint.textContent = "prev_hash trail · scrub to inspect";
     return;
   }
 
   els.chainScrub.max = String(nodes.length - 1);
   els.chainScrub.value = String(state.index);
-  els.chainHint.textContent = `${nodes.length} linked blocks · integrity via prev_hash → receipt_hash`;
+  if (els.chainHint) {
+    els.chainHint.textContent = `${nodes.length} linked blocks · integrity via prev_hash → receipt_hash`;
+  }
 
   els.chainTrack.innerHTML = nodes
     .map((n, i) => {
@@ -399,7 +482,10 @@ function renderChain(report) {
     .join("");
 
   els.chainTrack.querySelectorAll(".chain-node").forEach((node) => {
-    node.addEventListener("click", () => selectRound(Number(node.dataset.i), { animate: true }));
+    node.addEventListener("click", () => {
+      selectRound(Number(node.dataset.i), { animate: true });
+      openReceiptDrawer(Number(node.dataset.i));
+    });
   });
 
   updateChainFocus(nodes[state.index]);
@@ -456,6 +542,7 @@ function stopTheatre() {
 
 function startTheatre() {
   if (!state.report?.rounds?.length) return;
+  openDuelDrawer();
   state.theatre = true;
   els.theatreBtn.classList.add("active");
   els.theatreBtn.textContent = "■ Stop";
@@ -525,7 +612,7 @@ function coinRows(list) {
   return list
     .map((c) => {
       const pct = c.percent_change_24h;
-      return `<tr class="pick" data-sym="${escapeHtml(c.symbol)}">
+      return `<tr class="pick" data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(pct ?? "")}">
         <td class="sym">${escapeHtml(c.symbol)} <span style="color:var(--fg3);font-weight:500">${escapeHtml(c.name)}</span></td>
         <td>${escapeHtml(fmtUsd(c.price_usd))}</td>
         <td class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</td>
@@ -539,7 +626,7 @@ function coinListItems(list) {
   return list
     .map((c) => {
       const pct = c.percent_change_24h;
-      return `<li data-sym="${escapeHtml(c.symbol)}">
+      return `<li data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(pct ?? "")}">
         <span class="n">${escapeHtml(c.symbol)}</span>
         <span class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</span>
       </li>`;
@@ -547,14 +634,128 @@ function coinListItems(list) {
     .join("");
 }
 
-function bindPick(root) {
-  root.querySelectorAll("[data-sym]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const sym = el.getAttribute("data-sym");
-      if (!sym) return;
+function openCoinDrawer(el) {
+  const sym = el.getAttribute("data-sym");
+  if (!sym) return;
+  const name = el.getAttribute("data-name") || "";
+  const price = el.getAttribute("data-price");
+  const pct = el.getAttribute("data-pct");
+  openDrawer({
+    kicker: "Asset · CMC Pro",
+    title: sym,
+    mode: "coin",
+    bodyHtml: `
+      <div class="drawer-kv">
+        <div class="cg"><div class="cg-l">Name</div><div class="cg-v" style="font-size:13px">${escapeHtml(name || "—")}</div></div>
+        <div class="cg"><div class="cg-l">Price</div><div class="cg-v">${escapeHtml(fmtUsd(price === "" ? null : Number(price)))}</div></div>
+        <div class="cg"><div class="cg-l">24h</div><div class="cg-v ${pctClass(pct === "" ? null : Number(pct))}">${escapeHtml(fmtPct(pct === "" ? null : Number(pct)))}</div></div>
+        <div class="cg"><div class="cg-l">Action</div><div class="cg-v" style="font-size:12px;color:var(--cyan)">Run gate</div></div>
+      </div>
+      <p style="margin-top:4px">Click <b>Run gate</b> to clear this symbol through Witness before any sizing bot acts.</p>
+      <button type="button" class="run-btn" id="drawerRunGate" style="width:100%;margin-top:8px">Run gate · ${escapeHtml(sym)}</button>
+    `,
+  });
+  const btn = document.getElementById("drawerRunGate");
+  if (btn) {
+    btn.addEventListener("click", () => {
       els.symInput.value = sym;
+      closeDrawer();
       runLiveGate(sym);
     });
+  }
+}
+
+function bindPick(root) {
+  root.querySelectorAll("[data-sym]").forEach((el) => {
+    el.addEventListener("click", () => openCoinDrawer(el));
+  });
+}
+
+function openKpiModal(key) {
+  const floor = state.marketFloor;
+  const g = floor?.global ?? {};
+  const fg = floor?.fear_greed ?? {};
+  const alt = floor?.altcoin_season ?? {};
+  const map = {
+    mcap: {
+      title: "Total crypto mcap",
+      body: `<p><b>${escapeHtml(fmtUsd(g.total_market_cap))}</b></p><p>CMC global-metrics · total market capitalization across listed assets. Context for the gate — not a trade signal.</p>`,
+    },
+    vol: {
+      title: "24h volume",
+      body: `<p><b>${escapeHtml(fmtUsd(g.total_volume_24h))}</b></p><p>Reported USD volume (CMC global-metrics). Thin aggregate volume days often pair with CAUTION/BLOCK on micro-caps.</p>`,
+    },
+    btcd: {
+      title: "BTC dominance",
+      body: `<p><b>${g.btc_dominance != null ? escapeHtml(Number(g.btc_dominance).toFixed(2)) + "%" : "—"}</b></p><p>BTC share of total mcap. ETH.D: <b>${g.eth_dominance != null ? escapeHtml(Number(g.eth_dominance).toFixed(2)) + "%" : "—"}</b>.</p>`,
+    },
+    fg: {
+      title: "Fear & Greed",
+      body: `<p><b>${escapeHtml(fg.value ?? "—")}</b> · ${escapeHtml(fg.classification || "—")}</p><p>CMC v3 Fear &amp; Greed index — Pro floor context only. Witness does <b>not</b> invent this onto receipts.</p>`,
+    },
+    alt: {
+      title: "Altcoin Season",
+      body: `<p><b>${escapeHtml(alt.index ?? "—")}</b></p><p>Yearly high ${escapeHtml(alt.yearly_high ?? "—")} · low ${escapeHtml(alt.yearly_low ?? "—")}. Labeled CMC index for market regime context.</p>`,
+    },
+  };
+  const m = map[key];
+  if (m) openModal(m);
+}
+
+function mountDuelIntoDrawer() {
+  els.duelMount.hidden = false;
+  els.drawerBody.innerHTML = "";
+  els.drawerBody.appendChild(els.duelMount);
+}
+
+function openDuelDrawer() {
+  openDrawer({
+    kicker: "Duel theatre",
+    title: "Reckless vs Witness",
+    mode: "duel",
+    bodyHtml: "",
+  });
+  mountDuelIntoDrawer();
+}
+
+function openChainDrawer() {
+  openDrawer({
+    kicker: "Receipt chain",
+    title: "prev_hash trail",
+    mode: "chain",
+    bodyHtml: "",
+  });
+  mountDuelIntoDrawer();
+  // scroll chain into view inside drawer
+  els.chainTrack?.scrollIntoView({ block: "nearest" });
+}
+
+function openReceiptDrawer(i) {
+  const report = state.report;
+  const round = report?.rounds?.[i];
+  if (!round) return;
+  const nodes = chainRowsFromReport(report);
+  const node = nodes[i];
+  openDrawer({
+    kicker: `Height ${node?.chain_height ?? i}`,
+    title: String(round.proposed || "Receipt"),
+    mode: "receipt",
+    bodyHtml: `
+      <div class="drawer-kv">
+        <div class="cg"><div class="cg-l">Decision</div><div class="cg-v" style="color:var(--${round.decision === "allow" ? "green" : round.decision === "block" ? "red" : "amber"})">${escapeHtml(String(round.decision || "").toUpperCase())}</div></div>
+        <div class="cg"><div class="cg-l">Score</div><div class="cg-v">${escapeHtml(round.score)}</div></div>
+      </div>
+      <p>${escapeHtml(round.reckless_line || "")}</p>
+      <p style="font-family:var(--mono);font-size:10px;word-break:break-all">
+        prev_hash <span style="color:var(--cyan)">${escapeHtml(node?.prev_hash ?? "genesis")}</span><br/>
+        receipt_hash <span style="color:var(--gold)">${escapeHtml(node?.receipt_hash ?? "—")}</span>
+      </p>
+      <button type="button" class="act-mini gold" id="drawerShowDuel">Open duel theatre</button>
+    `,
+  });
+  document.getElementById("drawerShowDuel")?.addEventListener("click", () => {
+    selectRound(i, { animate: true });
+    openDuelDrawer();
   });
 }
 
@@ -572,29 +773,33 @@ function renderMarketFloor(floor) {
   const mock = Boolean(floor.mock);
   els.floorBanner.className = `mock-banner ${mock ? "mock" : "live"}`;
   els.bannerText.textContent = mock
-    ? "MOCK MARKET FLOOR — labeled sample (no CMC_API_KEY). Pro panels are placeholders."
-    : `LIVE CMC PRO FLOOR · ${floor.endpoints_used?.length ?? 0} endpoints · cached ~${Math.round((floor.cache_ttl_ms ?? 55000) / 1000)}s · ${floor.fetched_at ?? ""}`;
+    ? "MOCK MARKET FLOOR — labeled sample (no CMC_API_KEY)"
+    : `LIVE CMC PRO · ${floor.endpoints_used?.length ?? 0} endpoints · ~${Math.round((floor.cache_ttl_ms ?? 55000) / 1000)}s cache · ${floor.fetched_at ?? ""}`;
   els.sessFloor.textContent = mock ? "Floor · MOCK" : "Floor · CMC Pro";
-  els.floorMeta.textContent = `${floor.source} · ${floor.fetched_at ?? ""} · ${(floor.endpoints_used ?? []).join(", ")}`;
+  els.floorMeta.textContent = `${floor.source} · ${floor.fetched_at ?? ""}`;
 
   const g = floor.global ?? {};
   els.mkMcap.textContent = fmtUsd(g.total_market_cap);
   els.mkVol.textContent = fmtUsd(g.total_volume_24h);
-  els.mkBtcD.textContent = g.btc_dominance != null ? `${Number(g.btc_dominance).toFixed(2)}%` : "—";
-  els.mkEthD.textContent = g.eth_dominance != null ? `${Number(g.eth_dominance).toFixed(2)}%` : "—";
+  els.mkBtcD.textContent = g.btc_dominance != null ? `${Number(g.btc_dominance).toFixed(1)}%` : "—";
+  if (els.mkEthD) {
+    els.mkEthD.textContent = g.eth_dominance != null ? `${Number(g.eth_dominance).toFixed(2)}%` : "—";
+  }
 
   const fg = floor.fear_greed ?? {};
   const fgVal = fg.value != null ? Number(fg.value) : null;
   els.mkFgVal.textContent = fgVal != null ? String(fgVal) : "—";
-  els.mkFgClass.textContent = fg.classification || "—";
-  if (fgVal != null) els.fgRing.style.setProperty("--fg", String(fgVal));
+  if (els.mkFgClass) els.mkFgClass.textContent = fg.classification || "—";
+  if (fgVal != null && els.fgRing) els.fgRing.style.setProperty("--fg", String(fgVal));
 
   const alt = floor.altcoin_season ?? {};
   els.mkAlt.textContent = alt.index != null ? String(alt.index) : "—";
-  els.mkAltSub.textContent =
-    alt.yearly_high != null
-      ? `yr high ${alt.yearly_high} · low ${alt.yearly_low ?? "—"}`
-      : "index · CMC";
+  if (els.mkAltSub) {
+    els.mkAltSub.textContent =
+      alt.yearly_high != null
+        ? `yr high ${alt.yearly_high} · low ${alt.yearly_low ?? "—"}`
+        : "index · CMC";
+  }
 
   els.gainersBody.innerHTML = coinRows(floor.gainers);
   els.losersBody.innerHTML = coinRows(floor.losers);
@@ -606,7 +811,7 @@ function renderMarketFloor(floor) {
     ? news
         .map(
           (c) =>
-            `<button type="button" class="new-chip" data-sym="${escapeHtml(c.symbol)}"><b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(fmtPct(c.percent_change_24h))}</span></button>`,
+            `<button type="button" class="new-chip" data-sym="${escapeHtml(c.symbol)}" data-name="${escapeHtml(c.name || "")}" data-price="${escapeHtml(c.price_usd ?? "")}" data-pct="${escapeHtml(c.percent_change_24h ?? "")}"><b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(fmtPct(c.percent_change_24h))}</span></button>`,
         )
         .join("")
     : `<span class="empty">No new listings</span>`;
@@ -616,13 +821,22 @@ function renderMarketFloor(floor) {
     ? cats
         .map((c) => {
           const ch = c.avg_price_change ?? c.market_cap_change;
-          return `<li>
+          return `<li data-cat="${escapeHtml(c.name)}">
             <span class="n">${escapeHtml(c.name)}</span>
             <span class="${pctClass(ch)}">${escapeHtml(fmtPct(ch))}</span>
           </li>`;
         })
         .join("")
     : `<li class="empty">No categories</li>`;
+
+  els.catList.querySelectorAll("[data-cat]").forEach((el) => {
+    el.addEventListener("click", () => {
+      openModal({
+        title: el.getAttribute("data-cat") || "Category",
+        bodyHtml: `<p>CMC category mover from the Pro floor. Use as sector context beside the gate — not a sizing instruction.</p><p>24h change shown on the row.</p>`,
+      });
+    });
+  });
 
   bindPick(els.gainersBody);
   bindPick(els.losersBody);
@@ -653,7 +867,7 @@ async function tryFetchDefault() {
       /* next */
     }
   }
-  els.reportMeta.textContent = "No duel-report.json found. Run: pnpm witness duel --fixture";
+  els.reportMeta.textContent = "No duel-report.json — run: pnpm witness duel --fixture";
   renderVerdict(null);
 }
 
@@ -674,7 +888,7 @@ async function runLiveGate(symbol) {
       decision,
       score: data.score,
       symbol: receipt.symbol || sym,
-      sub: `Live gate · mode ${data.mode ?? receipt.auth_mode ?? "?"} · height ${receipt.chain_height ?? "—"}`,
+      sub: `Live · ${data.mode ?? receipt.auth_mode ?? "?"} · h${receipt.chain_height ?? "—"}`,
       caseIdx: "LIVE CHECK",
       recklessLine: `Agent proposed ${sym} — Witness scored from CMC evidence.`,
       reasons: data.reasons ?? [],
@@ -693,16 +907,16 @@ async function runLiveGate(symbol) {
     await loadReceipts();
     tickNumber(els.kpiReceipts, state.receipts.length);
     toast(`${String(decision).toUpperCase()} · ${sym} · score ${data.score}`);
-    els.gateHint.innerHTML = `Live result from <code>/api/check</code>${data.enrichment_source === "cmc-pro" ? " + Pro performance/OHLCV" : ""}.`;
+    els.gateHint.innerHTML = `Live <code>/api/check</code>${data.enrichment_source === "cmc-pro" ? " + Pro OHLCV" : ""}.`;
   } catch (err) {
     const rounds = state.report?.rounds ?? [];
     const idx = rounds.findIndex((r) => String(r.proposed).toUpperCase() === sym.toUpperCase());
     if (idx >= 0) {
       selectRound(idx, { animate: true });
       toast(`No live API — showing duel round for ${sym}`);
-      els.gateHint.innerHTML = `Live <code>/api/check</code> unavailable. Showing fixture duel. CLI: <code>pnpm witness check ${escapeHtml(sym)} --fixture</code>`;
+      els.gateHint.innerHTML = `Live unavailable. Showing fixture. CLI: <code>pnpm witness check ${escapeHtml(sym)} --fixture</code>`;
     } else {
-      toast(`Gate unavailable — use CLI: pnpm witness check ${sym} --fixture`);
+      toast(`Gate unavailable — CLI: pnpm witness check ${sym} --fixture`);
       els.gateHint.innerHTML = `Could not reach <code>/api/check</code> (${escapeHtml(err.message)}).`;
     }
   } finally {
@@ -710,17 +924,42 @@ async function runLiveGate(symbol) {
   }
 }
 
-/* Help toggles */
-document.querySelectorAll(".help-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const id = btn.getAttribute("data-help");
-    const card = document.getElementById(id);
-    if (!card) return;
-    const open = card.hasAttribute("hidden");
-    card.toggleAttribute("hidden", !open);
-    btn.setAttribute("aria-expanded", open ? "true" : "false");
+/* Tabs */
+document.querySelectorAll(".tabs").forEach((group) => {
+  group.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const name = tab.getAttribute("data-tab");
+      group.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
+      const panel = group.closest(".panel");
+      panel?.querySelectorAll(".tab-pane").forEach((p) => {
+        const on = p.id === `pane-${name}`;
+        p.toggleAttribute("hidden", !on);
+        p.classList.toggle("on", on);
+      });
+    });
   });
 });
+
+/* Help / allow modal */
+document.querySelectorAll("[data-modal]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const key = btn.getAttribute("data-modal");
+    const h = HELP[key];
+    if (h) openModal(h);
+  });
+});
+els.allowHelpBtn?.addEventListener("click", () => openModal(HELP.allow));
+
+document.querySelectorAll(".kpi-tap").forEach((btn) => {
+  btn.addEventListener("click", () => openKpiModal(btn.getAttribute("data-kpi")));
+});
+
+els.openChainBtn?.addEventListener("click", openChainDrawer);
+els.openDuelBtn?.addEventListener("click", openDuelDrawer);
+els.drawerClose?.addEventListener("click", closeDrawer);
+els.drawerScrim?.addEventListener("click", closeDrawer);
+els.modalClose?.addEventListener("click", closeModal);
+els.modalScrim?.addEventListener("click", closeModal);
 
 els.enterBtn.addEventListener("click", enterFloor);
 
@@ -753,6 +992,11 @@ els.gateForm.addEventListener("submit", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeDrawer();
+    closeModal();
+    return;
+  }
   if (e.target === els.symInput) return;
   if (e.key === "ArrowRight") selectRound(state.index + 1, { animate: true });
   if (e.key === "ArrowLeft") selectRound(state.index - 1, { animate: true });
@@ -788,6 +1032,4 @@ async function boot() {
 }
 
 boot();
-
-// Auto-refresh market floor every ~60s
 setInterval(() => loadMarketFloor(), 60_000);
