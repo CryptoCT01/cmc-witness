@@ -13,7 +13,7 @@ Witness dossier: quotes + listings + conditional dex/search
 JUDGMENT + Market Receipt v2 (evidence[] · prev_hash · chain_height)
 ```
 
-**Why this wows:** not another “AI that reads a quote.” It’s a **courtroom demo** — duel the reckless agent, inspect endpoint evidence, verify the chain, open a dark crypto-native console. Metrics on the receipt are **only** what CMC returned. Witness **never invents** RSI, fear/greed, or synthetic indicators.
+**Why this wows:** not another “AI that reads a quote.” It’s a **courtroom demo** — duel the reckless agent, inspect endpoint evidence, verify the chain, open a dark crypto-native console. Metrics on the **receipt** are **only** what CMC returned for the gate. Witness **never invents** RSI or synthetic indicators. The console market floor shows **CMC’s own** Fear&Greed / Altcoin Season as labeled Pro context — not invented by Witness.
 
 ---
 
@@ -121,30 +121,45 @@ Optional hosted MCP (we still ship our own receipt-layer MCP):
 
 ---
 
-## Judge Console
+## Judge Console + Pro Market Floor
 
-Fullscreen-ready courtroom UI for hackathon judges — cinematic dark theme, live verdict plate + score ring, dossier evidence timeline, scrubbable receipt chain, and **Duel Theatre** mode.
+Fullscreen-ready terminal for hackathon judges — **CMC Pro market floor** (live global KPIs, Fear&Greed, Altcoin Season, gainers/losers, trending, new listings, categories) plus the pre-trade gate, dossier evidence, scrubbable receipt chain, and **Duel Theatre**. Gate sits **in** market context, not alone. Honest labels: **gate ≠ buy**; Pro panels = market context from CMC.
 
 ```bash
 pnpm witness duel --fixture   # writes duel-report.json (+ receipts JSONL)
 pnpm console                  # → http://127.0.0.1:4173
+# with CMC_API_KEY in .env → live /api/market-floor
 ```
 
 **How to open**
 
-1. Run the fixture duel (offline, no keys).
-2. `pnpm console` → open **http://127.0.0.1:4173**.
-3. Hit **Theatre** (or press Space) to step Reckless proposals vs Witness judgments.
-4. Scrub the receipt chain; click a round to inspect CMC endpoint evidence (`path`, `credit_count`, `status_timestamp`).
-5. Optional: **Load report** to import any `duel-report.json`. APIs served: `/duel-report.json`, `/api/receipts`.
+1. Put `CMC_API_KEY` in `.env` (gitignored) for the live Pro floor. Without a key, `/api/market-floor` returns **503** (or labeled **MOCK** if `?mock=1` / `CMC_WITNESS_MARKET_FLOOR_MOCK=1`).
+2. Run the fixture duel (offline gate demo).
+3. `pnpm console` → open **http://127.0.0.1:4173**.
+4. Market strip + panels load from **`GET /api/market-floor`** (in-memory cache ~55s).
+5. Run a live check — verdict + dossier; when Pro key is present, **price-performance** + **OHLCV spark** attach.
+6. Hit **Theatre** (or Space) for Reckless vs Witness; scrub the receipt chain.
 
-Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.png`.
+Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.png`, `screenshots/judge-console-splash.png`.
+
+### Console HTTP APIs
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/market-floor` | Aggregated Pro market floor JSON (parallel CMC calls, ~55s cache) |
+| `GET /api/market-floor?refresh=1` | Bypass cache |
+| `GET /api/market-floor?mock=1` | Labeled MOCK sample when no key |
+| `GET /api/check?symbol=BTC` | Gate + receipt; attaches `price_performance` + `ohlcv_spark` when key present |
+| `GET /api/receipts` | Receipt chain JSONL |
+| `GET /duel-report.json` | Latest duel report |
 
 ---
 
 ## CMC endpoints (documented)
 
 **Base:** `https://pro-api.coinmarketcap.com`
+
+### Gate stack (x402 + key)
 
 | Use | x402 path | Key path |
 |-----|-----------|----------|
@@ -153,18 +168,45 @@ Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.pn
 | DEX search | `/x402/v1/dex/search` | `/v1/dex/search` |
 | DEX pair quotes | `/x402/v4/dex/pairs/quotes/latest` | `/v4/dex/pairs/quotes/latest` |
 
+### Pro market floor (`GET /api/market-floor`)
+
+Parallel key-auth calls via `src/cmc/market-floor.ts` (credits cached ~55s):
+
+| Panel | Endpoint |
+|-------|----------|
+| Total mcap / volume / BTC.D / ETH.D | `/v1/global-metrics/quotes/latest` |
+| Fear & Greed | `/v3/fear-and-greed/latest` |
+| Altcoin Season | `/v1/altcoin-season-index/latest` |
+| Gainers | `/v1/cryptocurrency/trending/gainers-losers` |
+| Losers | `/v1/cryptocurrency/listings/latest?sort=percent_change_24h&sort_dir=asc` |
+| Trending | `/v1/cryptocurrency/trending/latest` |
+| Most visited | `/v1/cryptocurrency/trending/most-visited` |
+| New listings | `/v1/cryptocurrency/listings/new` |
+| Categories | `/v1/cryptocurrency/categories?limit=10` |
+
+### Check enrichment (`GET /api/check`)
+
+When `CMC_API_KEY` is set, also attaches:
+
+| Field | Endpoint |
+|-------|----------|
+| `price_performance` | `/v2/cryptocurrency/price-performance-stats/latest` |
+| `ohlcv_spark` | `/v2/cryptocurrency/ohlcv/historical` (daily closes) |
+
+Skipped on this plan: `content/latest`, `exchange/listings`, `market-pairs`.
+
 ---
 
 ## Project layout
 
 ```text
 src/
-  cmc/          # x402 · key · fixture clients + endpoints
+  cmc/          # x402 · key · fixture · market-floor + endpoints
   witness/      # gate · dossier · Market Receipt v2 · chain verify
-  demo/         # duel.ts · console-server.ts
+  demo/         # duel.ts · console-server.ts (/api/market-floor)
   mcp/          # MCP server we own
   cli.ts
-console/        # Judge Console (static UI)
+console/        # Judge Console + Pro market floor UI
 fixtures/       # BTC / ETH / RUG / listings / dex
 tests/
 ```
@@ -198,7 +240,7 @@ tests/
 - [x] Core agent tool: `before_you_trade` (+ `investigate`)
 - [x] Reckless vs Witness **duel** + `duel-report.json`
 - [x] Tamper-evident **receipt chain** (`pnpm witness chain`)
-- [x] **Judge Console** UI for demo video / live judging
+- [x] **Judge Console** UI + **Pro market floor** (`/api/market-floor`) for demo video / live judging
 - [x] Offline fixture mode for judges (no secrets)
 - [x] MIT license, `.env.example`, never commit secrets
 - [x] Documents CMC x402 endpoints + optional hosted MCP URL

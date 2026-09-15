@@ -1,4 +1,4 @@
-/** CMC Witness · Pre-trade Gate console */
+/** CMC Witness · Pre-trade Gate + Pro Market Floor console */
 
 const els = {
   splash: document.getElementById("splash"),
@@ -18,10 +18,13 @@ const els = {
   kpiLast: document.getElementById("kpiLast"),
   usdcNoteBox: document.getElementById("usdcNoteBox"),
   reportMeta: document.getElementById("reportMeta"),
+  floorMeta: document.getElementById("floorMeta"),
   modePill: document.getElementById("modePill"),
   sessMode: document.getElementById("sessMode"),
+  sessFloor: document.getElementById("sessFloor"),
   fileInput: document.getElementById("fileInput"),
   reloadBtn: document.getElementById("reloadBtn"),
+  refreshFloorBtn: document.getElementById("refreshFloorBtn"),
   theatreBtn: document.getElementById("theatreBtn"),
   prevBtn: document.getElementById("prevBtn"),
   nextBtn: document.getElementById("nextBtn"),
@@ -42,6 +45,26 @@ const els = {
   gateHint: document.getElementById("gateHint"),
   clk: document.getElementById("clk"),
   toast: document.getElementById("toast"),
+  floorBanner: document.getElementById("floorBanner"),
+  bannerText: document.getElementById("bannerText"),
+  mkMcap: document.getElementById("mkMcap"),
+  mkVol: document.getElementById("mkVol"),
+  mkBtcD: document.getElementById("mkBtcD"),
+  mkEthD: document.getElementById("mkEthD"),
+  mkFgVal: document.getElementById("mkFgVal"),
+  mkFgClass: document.getElementById("mkFgClass"),
+  fgRing: document.getElementById("fgRing"),
+  mkAlt: document.getElementById("mkAlt"),
+  mkAltSub: document.getElementById("mkAltSub"),
+  gainersBody: document.getElementById("gainersBody"),
+  losersBody: document.getElementById("losersBody"),
+  trendingList: document.getElementById("trendingList"),
+  visitedList: document.getElementById("visitedList"),
+  newStrip: document.getElementById("newStrip"),
+  catList: document.getElementById("catList"),
+  enrichBlock: document.getElementById("enrichBlock"),
+  perfGrid: document.getElementById("perfGrid"),
+  sparkSvg: document.getElementById("sparkSvg"),
 };
 
 const state = {
@@ -52,6 +75,7 @@ const state = {
   theatre: false,
   theatreTimer: null,
   liveResult: null,
+  marketFloor: null,
 };
 
 function escapeHtml(s) {
@@ -79,6 +103,31 @@ function toast(msg) {
   els.toast.classList.add("show");
   clearTimeout(toast._t);
   toast._t = setTimeout(() => els.toast.classList.remove("show"), 2800);
+}
+
+function fmtUsd(n, digits = 2) {
+  if (n == null || Number.isNaN(Number(n))) return "—";
+  const v = Number(n);
+  const abs = Math.abs(v);
+  if (abs >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `$${(v / 1e3).toFixed(2)}K`;
+  if (abs >= 1) return `$${v.toFixed(digits)}`;
+  if (abs >= 0.01) return `$${v.toFixed(4)}`;
+  return `$${v.toPrecision(3)}`;
+}
+
+function fmtPct(n) {
+  if (n == null || Number.isNaN(Number(n))) return "—";
+  const v = Number(n);
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)}%`;
+}
+
+function pctClass(n) {
+  if (n == null || Number.isNaN(Number(n))) return "";
+  return Number(n) >= 0 ? "up" : "dn";
 }
 
 function enterFloor() {
@@ -190,6 +239,58 @@ function renderTheatre(round, { animate } = {}) {
   else show();
 }
 
+function hideEnrichment() {
+  els.enrichBlock.hidden = true;
+  els.perfGrid.innerHTML = "";
+  els.sparkSvg.innerHTML = "";
+}
+
+function renderEnrichment(data) {
+  const perf = data?.price_performance;
+  const spark = data?.ohlcv_spark;
+  if ((!perf || !perf.length) && (!spark || !spark.length)) {
+    hideEnrichment();
+    return;
+  }
+  els.enrichBlock.hidden = false;
+
+  const order = ["24h", "7d", "30d", "all_time"];
+  const sorted = [...(perf ?? [])].sort(
+    (a, b) => order.indexOf(a.period) - order.indexOf(b.period),
+  );
+  els.perfGrid.innerHTML = sorted
+    .map((p) => {
+      const cls = pctClass(p.percent_change);
+      return `<div class="perf-cell">
+        <div class="pl">${escapeHtml(p.period)}</div>
+        <div class="pv ${cls}">${escapeHtml(fmtPct(p.percent_change))}</div>
+      </div>`;
+    })
+    .join("");
+
+  if (spark?.length) {
+    const min = Math.min(...spark);
+    const max = Math.max(...spark);
+    const span = max - min || 1;
+    const pts = spark
+      .map((v, i) => {
+        const x = (i / Math.max(spark.length - 1, 1)) * 200;
+        const y = 36 - ((v - min) / span) * 32;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    const up = spark[spark.length - 1] >= spark[0];
+    const stroke = up ? "#3dff9c" : "#ff5d6c";
+    els.sparkSvg.innerHTML = `
+      <polyline fill="none" stroke="${stroke}" stroke-width="1.6" points="${pts}" />
+      <polyline fill="${up ? "rgba(61,255,156,.12)" : "rgba(255,93,108,.12)"}" stroke="none"
+        points="0,40 ${pts} 200,40" />
+    `;
+  } else {
+    els.sparkSvg.innerHTML = "";
+  }
+}
+
 function applyVerdictView({
   decision,
   score,
@@ -199,6 +300,7 @@ function applyVerdictView({
   recklessLine,
   reasons,
   evidence,
+  enrichment,
 }) {
   const d = decision || "";
   els.verdictBlock.dataset.decision = d;
@@ -230,6 +332,9 @@ function applyVerdictView({
       )
       .join("");
   }
+
+  if (enrichment) renderEnrichment(enrichment);
+  else hideEnrichment();
 }
 
 function renderVerdict(round) {
@@ -378,7 +483,6 @@ function loadReport(report) {
       r.receipt_hash = r.receipt_hash ?? rec.receipt_hash;
     }
   }
-  // Derive summary if missing
   if (!report.summary && report.rounds) {
     const summary = { allow: 0, caution: 0, block: 0, total: report.rounds.length };
     for (const r of report.rounds) {
@@ -394,8 +498,14 @@ function loadReport(report) {
 
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`${url} ${res.status}`);
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `${url} ${res.status}`);
+    err.status = res.status;
+    err.body = data;
+    throw err;
+  }
+  return data;
 }
 
 async function loadReceipts() {
@@ -407,6 +517,127 @@ async function loadReceipts() {
   } catch {
     state.receipts = [];
     state.receiptsById = new Map();
+  }
+}
+
+function coinRows(list) {
+  if (!list?.length) return `<tr><td colspan="3" class="empty">No data</td></tr>`;
+  return list
+    .map((c) => {
+      const pct = c.percent_change_24h;
+      return `<tr class="pick" data-sym="${escapeHtml(c.symbol)}">
+        <td class="sym">${escapeHtml(c.symbol)} <span style="color:var(--fg3);font-weight:500">${escapeHtml(c.name)}</span></td>
+        <td>${escapeHtml(fmtUsd(c.price_usd))}</td>
+        <td class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function coinListItems(list) {
+  if (!list?.length) return `<li class="empty">No data</li>`;
+  return list
+    .map((c) => {
+      const pct = c.percent_change_24h;
+      return `<li data-sym="${escapeHtml(c.symbol)}">
+        <span class="n">${escapeHtml(c.symbol)}</span>
+        <span class="${pctClass(pct)}">${escapeHtml(fmtPct(pct))}</span>
+      </li>`;
+    })
+    .join("");
+}
+
+function bindPick(root) {
+  root.querySelectorAll("[data-sym]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const sym = el.getAttribute("data-sym");
+      if (!sym) return;
+      els.symInput.value = sym;
+      runLiveGate(sym);
+    });
+  });
+}
+
+function renderMarketFloor(floor) {
+  state.marketFloor = floor;
+  if (!floor || floor.error) {
+    els.floorBanner.className = "mock-banner err";
+    els.bannerText.textContent =
+      floor?.error || "Market floor unavailable — set CMC_API_KEY in .env (never commit it).";
+    els.sessFloor.textContent = "Floor · offline";
+    els.floorMeta.textContent = "Floor · 503 / no key";
+    return;
+  }
+
+  const mock = Boolean(floor.mock);
+  els.floorBanner.className = `mock-banner ${mock ? "mock" : "live"}`;
+  els.bannerText.textContent = mock
+    ? "MOCK MARKET FLOOR — labeled sample (no CMC_API_KEY). Pro panels are placeholders."
+    : `LIVE CMC PRO FLOOR · ${floor.endpoints_used?.length ?? 0} endpoints · cached ~${Math.round((floor.cache_ttl_ms ?? 55000) / 1000)}s · ${floor.fetched_at ?? ""}`;
+  els.sessFloor.textContent = mock ? "Floor · MOCK" : "Floor · CMC Pro";
+  els.floorMeta.textContent = `${floor.source} · ${floor.fetched_at ?? ""} · ${(floor.endpoints_used ?? []).join(", ")}`;
+
+  const g = floor.global ?? {};
+  els.mkMcap.textContent = fmtUsd(g.total_market_cap);
+  els.mkVol.textContent = fmtUsd(g.total_volume_24h);
+  els.mkBtcD.textContent = g.btc_dominance != null ? `${Number(g.btc_dominance).toFixed(2)}%` : "—";
+  els.mkEthD.textContent = g.eth_dominance != null ? `${Number(g.eth_dominance).toFixed(2)}%` : "—";
+
+  const fg = floor.fear_greed ?? {};
+  const fgVal = fg.value != null ? Number(fg.value) : null;
+  els.mkFgVal.textContent = fgVal != null ? String(fgVal) : "—";
+  els.mkFgClass.textContent = fg.classification || "—";
+  if (fgVal != null) els.fgRing.style.setProperty("--fg", String(fgVal));
+
+  const alt = floor.altcoin_season ?? {};
+  els.mkAlt.textContent = alt.index != null ? String(alt.index) : "—";
+  els.mkAltSub.textContent =
+    alt.yearly_high != null
+      ? `yr high ${alt.yearly_high} · low ${alt.yearly_low ?? "—"}`
+      : "index · CMC";
+
+  els.gainersBody.innerHTML = coinRows(floor.gainers);
+  els.losersBody.innerHTML = coinRows(floor.losers);
+  els.trendingList.innerHTML = coinListItems(floor.trending);
+  els.visitedList.innerHTML = coinListItems(floor.most_visited);
+
+  const news = floor.new_listings ?? [];
+  els.newStrip.innerHTML = news.length
+    ? news
+        .map(
+          (c) =>
+            `<button type="button" class="new-chip" data-sym="${escapeHtml(c.symbol)}"><b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(fmtPct(c.percent_change_24h))}</span></button>`,
+        )
+        .join("")
+    : `<span class="empty">No new listings</span>`;
+
+  const cats = floor.categories ?? [];
+  els.catList.innerHTML = cats.length
+    ? cats
+        .map((c) => {
+          const ch = c.avg_price_change ?? c.market_cap_change;
+          return `<li>
+            <span class="n">${escapeHtml(c.name)}</span>
+            <span class="${pctClass(ch)}">${escapeHtml(fmtPct(ch))}</span>
+          </li>`;
+        })
+        .join("")
+    : `<li class="empty">No categories</li>`;
+
+  bindPick(els.gainersBody);
+  bindPick(els.losersBody);
+  bindPick(els.trendingList);
+  bindPick(els.visitedList);
+  bindPick(els.newStrip);
+}
+
+async function loadMarketFloor({ refresh = false } = {}) {
+  try {
+    const q = refresh ? "?refresh=1" : "";
+    const data = await fetchJson(`/api/market-floor${q}`);
+    renderMarketFloor(data);
+  } catch (err) {
+    renderMarketFloor(err.body || { error: err.message });
   }
 }
 
@@ -448,6 +679,10 @@ async function runLiveGate(symbol) {
       recklessLine: `Agent proposed ${sym} — Witness scored from CMC evidence.`,
       reasons: data.reasons ?? [],
       evidence: receipt.evidence ?? [],
+      enrichment: {
+        price_performance: data.price_performance,
+        ohlcv_spark: data.ohlcv_spark,
+      },
     });
     if (data.mode) {
       const mode = String(data.mode).toUpperCase();
@@ -458,9 +693,8 @@ async function runLiveGate(symbol) {
     await loadReceipts();
     tickNumber(els.kpiReceipts, state.receipts.length);
     toast(`${String(decision).toUpperCase()} · ${sym} · score ${data.score}`);
-    els.gateHint.innerHTML = `Live result from <code>/api/check</code>. Also: <code>pnpm witness check ${escapeHtml(sym)} --fixture</code>`;
+    els.gateHint.innerHTML = `Live result from <code>/api/check</code>${data.enrichment_source === "cmc-pro" ? " + Pro performance/OHLCV" : ""}.`;
   } catch (err) {
-    // Fall back: try matching duel round by symbol
     const rounds = state.report?.rounds ?? [];
     const idx = rounds.findIndex((r) => String(r.proposed).toUpperCase() === sym.toUpperCase());
     if (idx >= 0) {
@@ -469,7 +703,7 @@ async function runLiveGate(symbol) {
       els.gateHint.innerHTML = `Live <code>/api/check</code> unavailable. Showing fixture duel. CLI: <code>pnpm witness check ${escapeHtml(sym)} --fixture</code>`;
     } else {
       toast(`Gate unavailable — use CLI: pnpm witness check ${sym} --fixture`);
-      els.gateHint.innerHTML = `Could not reach <code>/api/check</code> (${escapeHtml(err.message)}). Run <code>pnpm witness check ${escapeHtml(sym)} --fixture</code> then reload receipts.`;
+      els.gateHint.innerHTML = `Could not reach <code>/api/check</code> (${escapeHtml(err.message)}).`;
     }
   } finally {
     els.runGateBtn.disabled = false;
@@ -498,7 +732,11 @@ els.fileInput.addEventListener("change", async (e) => {
   toast(`Loaded ${file.name}`);
 });
 
-els.reloadBtn.addEventListener("click", () => tryFetchDefault());
+els.reloadBtn.addEventListener("click", () => {
+  tryFetchDefault();
+  loadMarketFloor();
+});
+els.refreshFloorBtn.addEventListener("click", () => loadMarketFloor({ refresh: true }));
 els.prevBtn.addEventListener("click", () => selectRound(state.index - 1, { animate: true }));
 els.nextBtn.addEventListener("click", () => selectRound(state.index + 1, { animate: true }));
 els.theatreBtn.addEventListener("click", () => {
@@ -534,7 +772,7 @@ setInterval(tickClock, 1000);
 
 async function boot() {
   maybeAutoEnter();
-  await tryFetchDefault();
+  await Promise.all([tryFetchDefault(), loadMarketFloor()]);
   const params = new URLSearchParams(location.search);
   const q = params.get("round");
   if (!q || !state.report?.rounds?.length) return;
@@ -550,3 +788,6 @@ async function boot() {
 }
 
 boot();
+
+// Auto-refresh market floor every ~60s
+setInterval(() => loadMarketFloor(), 60_000);

@@ -20,3 +20,18 @@ export const KEY_ENDPOINTS = {
   dexSearch: "/v1/dex/search",
   dexPairsQuotesLatest: "/v4/dex/pairs/quotes/latest",
 } as const;
+
+/** Pro market-floor / terminal endpoints (key auth). */
+export const MARKET_FLOOR_ENDPOINTS = {
+  globalMetrics: "/v1/global-metrics/quotes/latest",
+  fearAndGreed: "/v3/fear-and-greed/latest",
+  altcoinSeason: "/v1/altcoin-season-index/latest",
+  gainersLosers: "/v1/cryptocurrency/trending/gainers-losers",
+  trendingLatest: "/v1/cryptocurrency/trending/latest",
+  mostVisited: "/v1/cryptocurrency/trending/most-visited",
+  listingsNew: "/v1/cryptocurrency/listings/new",
+  categories: "/v1/cryptocurrency/categories",
+  ohlcvHistorical: "/v2/cryptocurrency/ohlcv/historical",
+  ohlcvLatest: "/v2/cryptocurrency/ohlcv/latest",
+  pricePerformance: "/v2/cryptocurrency/price-performance-stats/latest",
+} as const;

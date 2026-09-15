@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
  * Lightweight static server for the CMC Witness Pre-trade Gate console.
- * Serves ./console, ./duel-report.json, receipt chain JSON, and optional /api/check.
+ * Serves ./console, ./duel-report.json, receipt chain JSON, /api/market-floor, and /api/check.
  */
+import { config as loadEnv } from "dotenv";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+loadEnv();
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 const CONSOLE_DIR = join(ROOT, "console");
@@ -63,18 +66,41 @@ async function loadReceipts(): Promise<unknown[]> {
 async function runCheck(symbol: string, modeHint?: string | null) {
   const { createCmcClient } = await import("../cmc/client.js");
   const { beforeYouTrade } = await import("../witness/index.js");
-  const mode =
-    modeHint === "x402" || modeHint === "key" || modeHint === "fixture"
-      ? modeHint
-      : "fixture";
-  const client = createCmcClient(mode);
+  const { enrichCheckSymbol } = await import("../cmc/market-floor.js");
+
+  let mode: "x402" | "key" | "fixture" | "auto" = "auto";
+  if (modeHint === "x402" || modeHint === "key" || modeHint === "fixture") {
+    mode = modeHint;
+  } else if (modeHint === "auto") {
+    mode = "auto";
+  }
+
+  const client = createCmcClient(mode === "auto" ? undefined : mode);
   const result = await beforeYouTrade(client, symbol, { dossier: true });
+
+  let enrichment = null;
+  try {
+    enrichment = await enrichCheckSymbol(symbol);
+  } catch {
+    enrichment = null;
+  }
+
   return {
     decision: result.decision,
     score: result.score,
     reasons: result.reasons,
     receipt: result.receipt,
     mode: client.mode,
+    ...(enrichment
+      ? {
+          price_performance: enrichment.price_performance,
+          ohlcv_spark: enrichment.ohlcv_spark,
+          enrichment_source: enrichment.enrichment_source,
+          ...(enrichment.enrichment_errors
+            ? { enrichment_errors: enrichment.enrichment_errors }
+            : {}),
+        }
+      : {}),
   };
 }
 
@@ -99,6 +125,22 @@ const server = createServer(async (req, res) => {
   if (path === "/api/receipts" || path === "/receipts.json") {
     const receipts = await loadReceipts();
     json(res, 200, { receipts, count: receipts.length });
+    return;
+  }
+
+  if (path === "/api/market-floor") {
+    try {
+      const { getMarketFloor } = await import("../cmc/market-floor.js");
+      const allowMock =
+        url.searchParams.get("mock") === "1" ||
+        process.env.CMC_WITNESS_MARKET_FLOOR_MOCK === "1";
+      const forceRefresh = url.searchParams.get("refresh") === "1";
+      const { status, body } = await getMarketFloor({ allowMock, forceRefresh });
+      json(res, status, body);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      json(res, 500, { error: message });
+    }
     return;
   }
 
@@ -141,6 +183,8 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`\n◆  CMC Witness · Pre-trade Gate console`);
   console.log(`   http://127.0.0.1:${PORT}  (also 0.0.0.0)`);
-  console.log(`   APIs: /duel-report.json  ·  /api/receipts  ·  /api/check?symbol=BTC`);
+  console.log(
+    `   APIs: /api/market-floor  ·  /duel-report.json  ·  /api/receipts  ·  /api/check?symbol=BTC`,
+  );
   console.log(`   Load duel: pnpm witness duel --fixture  (then refresh)\n`);
 });
