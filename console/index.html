@@ -4,61 +4,135 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Court of Markets — Judge Console</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta name="description" content="CMC Witness Judge Console — cinematic courtroom for market-truth judgments." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="bg-grid"></div>
-  <header class="top">
+  <div class="atmosphere" aria-hidden="true">
+    <div class="mesh mesh-a"></div>
+    <div class="mesh mesh-b"></div>
+    <div class="grain"></div>
+    <div class="vignette"></div>
+  </div>
+
+  <header class="topbar">
     <div class="brand">
-      <div class="seal">⚖</div>
-      <div>
+      <div class="seal" aria-hidden="true">
+        <span class="seal-ring"></span>
+        <span class="seal-mark">⚖</span>
+      </div>
+      <div class="brand-copy">
+        <p class="eyebrow">CMC Witness · Market Receipt v2</p>
         <h1>Court of Markets</h1>
-        <p class="tag">CMC Witness · Judge Console · #BuildwithCMC</p>
+        <p class="tagline">Judge Console · Reckless Agent vs Witness · #BuildwithCMC</p>
       </div>
     </div>
-    <div class="actions">
-      <label class="file-btn">
-        Load duel-report.json
-        <input type="file" id="fileInput" accept="application/json,.json" hidden />
-      </label>
-      <button id="reloadBtn" type="button">Reload ./duel-report.json</button>
+    <div class="top-meta">
+      <div class="pill" id="modePill">MODE · —</div>
+      <div class="pill live"><span class="pulse"></span> LIVE DOCKET</div>
+      <div class="toolbar">
+        <label class="btn ghost">
+          Load report
+          <input type="file" id="fileInput" accept="application/json,.json" hidden />
+        </label>
+        <button class="btn ghost" id="reloadBtn" type="button">Reload</button>
+        <button class="btn primary" id="theatreBtn" type="button">▶ Theatre</button>
+      </div>
     </div>
   </header>
 
-  <section class="hero">
-    <div class="hero-card">
-      <h2>Reckless Agent <span class="vs">vs</span> Witness</h2>
-      <p>Every proposal is judged against <strong>observed</strong> CoinMarketCap data — quotes, listings, and DEX search — then sealed in a tamper-evident receipt chain.</p>
-      <div class="stats" id="summaryStats">
-        <div class="stat allow"><span class="n" id="statAllow">—</span><span class="l">ALLOW</span></div>
-        <div class="stat caution"><span class="n" id="statCaution">—</span><span class="l">CAUTION</span></div>
-        <div class="stat block"><span class="n" id="statBlock">—</span><span class="l">BLOCK</span></div>
+  <section class="hero" id="hero">
+    <div class="hero-left">
+      <div class="verdict-plate" id="verdictPlate" data-decision="—">
+        <div class="verdict-glow"></div>
+        <p class="verdict-kicker">LIVE VERDICT</p>
+        <h2 class="verdict-word" id="verdictWord">STANDBY</h2>
+        <p class="verdict-sub" id="verdictSub">Awaiting docket</p>
       </div>
-      <p class="meta" id="reportMeta">Load a duel report to begin.</p>
+      <div class="score-stage">
+        <svg class="score-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="52" />
+          <circle class="ring-progress" id="scoreRing" cx="60" cy="60" r="52" />
+        </svg>
+        <div class="score-center">
+          <span class="score-value" id="scoreValue">0</span>
+          <span class="score-label">SCORE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="case-card">
+        <div class="case-head">
+          <span class="case-idx" id="caseIdx">ROUND —</span>
+          <span class="case-symbol" id="caseSymbol">—</span>
+        </div>
+        <p class="reckless" id="recklessLine">Load a duel report to open the courtroom.</p>
+        <div class="stat-row" id="summaryStats">
+          <div class="stat allow"><span class="n" id="statAllow">0</span><span class="l">ALLOW</span></div>
+          <div class="stat caution"><span class="n" id="statCaution">0</span><span class="l">CAUTION</span></div>
+          <div class="stat block"><span class="n" id="statBlock">0</span><span class="l">BLOCK</span></div>
+        </div>
+        <p class="report-meta" id="reportMeta">Offline fixture ready · pnpm witness duel --fixture</p>
+      </div>
+
+      <div class="theatre-controls">
+        <button class="btn ghost" id="prevBtn" type="button">← Prev</button>
+        <div class="stepper" id="stepper"></div>
+        <button class="btn ghost" id="nextBtn" type="button">Next →</button>
+      </div>
     </div>
   </section>
 
-  <main class="layout">
-    <section class="panel">
-      <h3>Duel Feed</h3>
-      <div id="feed" class="feed empty">No rounds yet. Run <code>pnpm witness duel --fixture</code> then reload.</div>
+  <main class="stage">
+    <section class="panel duel-panel">
+      <div class="panel-head">
+        <h3>Duel Theatre</h3>
+        <span class="hint">Step proposals vs judgments</span>
+      </div>
+      <div class="duel-stage" id="duelStage">
+        <div class="actor reckless-actor">
+          <p class="actor-label">Reckless Agent</p>
+          <div class="bubble" id="proposeBubble">—</div>
+        </div>
+        <div class="vs-chip">VS</div>
+        <div class="actor witness-actor">
+          <p class="actor-label">Witness</p>
+          <div class="bubble judgment" id="judgeBubble">—</div>
+        </div>
+      </div>
+      <div class="feed" id="feed"></div>
     </section>
-    <section class="panel">
-      <h3>Selected Judgment</h3>
-      <div id="detail" class="detail empty">Select a round from the feed.</div>
+
+    <section class="panel dossier-panel">
+      <div class="panel-head">
+        <h3>Dossier Evidence</h3>
+        <span class="hint">CMC endpoints · credits · timestamps</span>
+      </div>
+      <div class="timeline" id="evidenceTimeline"></div>
+      <div class="reasons" id="reasonsList"></div>
     </section>
-    <section class="panel full">
-      <h3>Receipt Chain</h3>
-      <div id="chain" class="chain empty">Chain appears after a duel report (or paste receipts).</div>
+
+    <section class="panel chain-panel full">
+      <div class="panel-head">
+        <h3>Receipt Chain</h3>
+        <span class="hint" id="chainHint">prev_hash trail · scrub to inspect</span>
+      </div>
+      <div class="chain-scrub">
+        <input type="range" id="chainScrub" min="0" max="0" value="0" />
+        <div class="chain-focus" id="chainFocus"></div>
+      </div>
+      <div class="chain-track" id="chainTrack"></div>
     </section>
   </main>
 
-  <footer>
-    <span>Never invents metrics · Market Receipt v2 · x402 / API key / fixture</span>
-    <span>AI Agents track · Build with CMC Hackathon</span>
+  <footer class="foot">
+    <span>Never invents metrics · Observed CMC data only · x402 / API key / fixture</span>
+    <span>AI Agents & Automation · Build with CMC Hackathon</span>
   </footer>
 
   <script type="module" src="./app.js"></script>

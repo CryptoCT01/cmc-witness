@@ -123,14 +123,22 @@ Optional hosted MCP (we still ship our own receipt-layer MCP):
 
 ## Judge Console
 
-Dark, crypto-native, presentation-ready UI:
+Fullscreen-ready courtroom UI for hackathon judges — cinematic dark theme, live verdict plate + score ring, dossier evidence timeline, scrubbable receipt chain, and **Duel Theatre** mode.
 
 ```bash
-pnpm witness duel --fixture   # writes duel-report.json
-pnpm console                  # http://127.0.0.1:4173
+pnpm witness duel --fixture   # writes duel-report.json (+ receipts JSONL)
+pnpm console                  # → http://127.0.0.1:4173
 ```
 
-Judges can also **Load duel-report.json** from disk via the UI button. Shows decision badges, reasons, endpoint evidence, and the receipt chain.
+**How to open**
+
+1. Run the fixture duel (offline, no keys).
+2. `pnpm console` → open **http://127.0.0.1:4173**.
+3. Hit **Theatre** (or press Space) to step Reckless proposals vs Witness judgments.
+4. Scrub the receipt chain; click a round to inspect CMC endpoint evidence (`path`, `credit_count`, `status_timestamp`).
+5. Optional: **Load report** to import any `duel-report.json`. APIs served: `/duel-report.json`, `/api/receipts`.
+
+Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.png`.
 
 ---
 

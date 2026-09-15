@@ -47,6 +47,13 @@ function banner(): void {
   );
 }
 
+export interface DuelEvidenceRow {
+  endpoint: string;
+  credit_count?: number;
+  status_timestamp?: string;
+  used_for?: string;
+}
+
 export interface DuelRound {
   index: number;
   proposed: string;
@@ -56,8 +63,12 @@ export interface DuelRound {
   reasons: string[];
   receipt_id: string;
   observed_hash: string;
+  receipt_hash?: string;
+  prev_hash?: string | null;
   chain_height: number;
   evidence_endpoints: string[];
+  /** Full dossier evidence rows for Judge Console. */
+  evidence: DuelEvidenceRow[];
 }
 
 export interface DuelReport {
@@ -182,8 +193,16 @@ export async function runDuel(opts: {
       reasons: result.reasons,
       receipt_id: result.receipt.id,
       observed_hash: result.receipt.observed_hash,
+      receipt_hash: result.receipt.receipt_hash,
+      prev_hash: result.receipt.prev_hash,
       chain_height: result.receipt.chain_height,
       evidence_endpoints: (result.receipt.evidence ?? []).map((e) => e.endpoint),
+      evidence: (result.receipt.evidence ?? []).map((e) => ({
+        endpoint: e.endpoint,
+        credit_count: e.credit_count,
+        status_timestamp: e.status_timestamp,
+        used_for: e.used_for,
+      })),
     });
   }
 

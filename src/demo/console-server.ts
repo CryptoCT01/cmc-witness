@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Lightweight static server for the Judge Console.
- * Serves ./console and exposes ./duel-report.json at /duel-report.json
+ * Serves ./console, ./duel-report.json, and receipt chain JSON.
  */
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
@@ -20,6 +20,7 @@ const MIME: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
 };
 
 async function safeRead(path: string): Promise<Buffer | null> {
@@ -31,6 +32,34 @@ async function safeRead(path: string): Promise<Buffer | null> {
   }
 }
 
+function json(res: import("node:http").ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  res.end(JSON.stringify(body));
+}
+
+async function loadReceipts(): Promise<unknown[]> {
+  const logPath =
+    process.env.CMC_WITNESS_RECEIPT_LOG ?? join(ROOT, "receipts", "market-receipts.jsonl");
+  const buf = await safeRead(logPath);
+  if (!buf) return [];
+  return buf
+    .toString("utf8")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://127.0.0.1:${PORT}`);
   let path = url.pathname;
@@ -38,8 +67,7 @@ const server = createServer(async (req, res) => {
   if (path === "/duel-report.json") {
     const buf = await safeRead(join(ROOT, "duel-report.json"));
     if (!buf) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Run pnpm witness duel --fixture first" }));
+      json(res, 404, { error: "Run pnpm witness duel --fixture first" });
       return;
     }
     res.writeHead(200, {
@@ -47,6 +75,12 @@ const server = createServer(async (req, res) => {
       "Cache-Control": "no-store",
     });
     res.end(buf);
+    return;
+  }
+
+  if (path === "/api/receipts" || path === "/receipts.json") {
+    const receipts = await loadReceipts();
+    json(res, 200, { receipts, count: receipts.length });
     return;
   }
 
@@ -72,5 +106,6 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`\n⚖  Court of Markets — Judge Console`);
   console.log(`   http://127.0.0.1:${PORT}`);
+  console.log(`   APIs: /duel-report.json  ·  /api/receipts`);
   console.log(`   Load duel: pnpm witness duel --fixture  (then refresh)\n`);
 });
