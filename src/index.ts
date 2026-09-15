@@ -7,9 +7,22 @@ export type { CmcClient, AuthMode, CryptoAsset, QuotesLatestResponse } from "./c
 export {
   beforeYouTrade,
   evaluateAsset,
+  investigate,
+  gatherDossier,
   createMarketReceipt,
   appendReceiptLog,
   getLatestReceipt,
+  verifyReceiptChain,
+  readChainTip,
+  hashObserved,
+  hashReceiptLink,
 } from "./witness/index.js";
-export type { Decision, GateResult, MarketReceipt } from "./witness/index.js";
+export type {
+  Decision,
+  GateResult,
+  MarketReceipt,
+  EvidenceEntry,
+} from "./witness/index.js";
 export { registerWitnessTools } from "./mcp/tools.js";
+export { runDuel } from "./demo/duel.js";
+export type { DuelReport, DuelRound } from "./demo/duel.js";

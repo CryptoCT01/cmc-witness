@@ -8,7 +8,7 @@ async function main(): Promise<void> {
   const client = createCmcClient();
   const server = new McpServer({
     name: "cmc-witness",
-    version: "0.1.0",
+    version: "0.2.0",
   });
 
   registerWitnessTools(server, client);
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
 
   // stderr only — stdout is MCP JSON-RPC
   console.error(
-    `[cmc-witness mcp] ready (mode=${client.mode}). Tools: before_you_trade, market_receipt_latest, quote, dex_search`,
+    `[cmc-witness mcp] ready (mode=${client.mode}). Tools: before_you_trade, investigate, market_receipt_latest, verify_chain, quote, dex_search`,
   );
 }
 

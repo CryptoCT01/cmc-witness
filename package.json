@@ -1,7 +1,7 @@
 {
   "name": "cmc-witness",
-  "version": "0.1.0",
-  "description": "CMC Witness — self-funding market-truth agent for CoinMarketCap Build with CMC hackathon (x402 + MCP)",
+  "version": "0.2.0",
+  "description": "Court of Markets — CMC Witness market-truth agent for CoinMarketCap Build with CMC hackathon (x402 + MCP + receipt chain)",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -16,6 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "witness": "tsx src/cli.ts",
+    "duel": "tsx src/demo/duel.ts",
+    "console": "tsx src/demo/console-server.ts",
+    "demo": "tsx src/demo/console-server.ts",
     "mcp": "tsx src/mcp/server.ts",
     "dev": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -26,7 +29,8 @@
     "mcp",
     "ai-agent",
     "BuildwithCMC",
-    "market-truth"
+    "market-truth",
+    "court-of-markets"
   ],
   "author": "CryptoCT01",
   "license": "MIT",

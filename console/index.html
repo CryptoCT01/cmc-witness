@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Court of Markets — Judge Console</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="top">
+    <div class="brand">
+      <div class="seal">⚖</div>
+      <div>
+        <h1>Court of Markets</h1>
+        <p class="tag">CMC Witness · Judge Console · #BuildwithCMC</p>
+      </div>
+    </div>
+    <div class="actions">
+      <label class="file-btn">
+        Load duel-report.json
+        <input type="file" id="fileInput" accept="application/json,.json" hidden />
+      </label>
+      <button id="reloadBtn" type="button">Reload ./duel-report.json</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-card">
+      <h2>Reckless Agent <span class="vs">vs</span> Witness</h2>
+      <p>Every proposal is judged against <strong>observed</strong> CoinMarketCap data — quotes, listings, and DEX search — then sealed in a tamper-evident receipt chain.</p>
+      <div class="stats" id="summaryStats">
+        <div class="stat allow"><span class="n" id="statAllow">—</span><span class="l">ALLOW</span></div>
+        <div class="stat caution"><span class="n" id="statCaution">—</span><span class="l">CAUTION</span></div>
+        <div class="stat block"><span class="n" id="statBlock">—</span><span class="l">BLOCK</span></div>
+      </div>
+      <p class="meta" id="reportMeta">Load a duel report to begin.</p>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="panel">
+      <h3>Duel Feed</h3>
+      <div id="feed" class="feed empty">No rounds yet. Run <code>pnpm witness duel --fixture</code> then reload.</div>
+    </section>
+    <section class="panel">
+      <h3>Selected Judgment</h3>
+      <div id="detail" class="detail empty">Select a round from the feed.</div>
+    </section>
+    <section class="panel full">
+      <h3>Receipt Chain</h3>
+      <div id="chain" class="chain empty">Chain appears after a duel report (or paste receipts).</div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Never invents metrics · Market Receipt v2 · x402 / API key / fixture</span>
+    <span>AI Agents track · Build with CMC Hackathon</span>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
