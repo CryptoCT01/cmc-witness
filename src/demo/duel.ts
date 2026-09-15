@@ -39,7 +39,7 @@ function banner(): void {
       "cyan",
       `
 ╔══════════════════════════════════════════════════════════╗
-║          COURT OF MARKETS — RECKLESS vs WITNESS          ║
+║           CMC WITNESS — AGENT vs PRE-TRADE GATE          ║
 ║     Build with CMC · AI Agents track · #BuildwithCMC     ║
 ╚══════════════════════════════════════════════════════════╝
 `,
@@ -61,6 +61,7 @@ export interface DuelRound {
   decision: Decision;
   score: number;
   reasons: string[];
+  reason_chips?: string[];
   receipt_id: string;
   observed_hash: string;
   receipt_hash?: string;
@@ -191,6 +192,7 @@ export async function runDuel(opts: {
       decision: result.decision,
       score: result.score,
       reasons: result.reasons,
+      reason_chips: result.reason_chips,
       receipt_id: result.receipt.id,
       observed_hash: result.receipt.observed_hash,
       receipt_hash: result.receipt.receipt_hash,
@@ -207,7 +209,7 @@ export async function runDuel(opts: {
   }
 
   const report: DuelReport = {
-    title: "Court of Markets — Reckless Agent vs Witness",
+    title: "CMC Witness — Agent Propose vs Pre-trade Gate",
     created_at: new Date().toISOString(),
     mode: client.mode,
     rounds,

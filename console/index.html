@@ -28,9 +28,9 @@
     <div class="splash-title"><span>CMC Witness</span></div>
     <p class="splash-brand">Pre-trade Gate · Pro Market Floor</p>
     <p class="splash-sub">
-      Free sites show BTC’s price. <b>Witness is a pre-trade referee</b>: agents clear
-      <code>before_you_trade</code> before sizing. Live <b>CMC Pro floor</b> —
-      sparklines, logos, top mcap, F&amp;G history — sits beside the gate. Gate ≠ buy.
+      Free sites show BTC’s price. <b>Witness is the pre-trade gate</b>: bots clear
+      <code>before_you_trade</code> before they size. Live <b>CMC Pro floor</b> —
+      sparklines, logos, top mcap, F&amp;G — feeds the score. <b>ALLOW ≠ long/short.</b>
     </p>
     <div class="splash-pills">
       <span class="sp g">MCP</span>
@@ -40,13 +40,18 @@
       <span class="sp g">Pre-trade gate</span>
     </div>
     <button class="enter" id="enterBtn" type="button">Enter the floor</button>
-    <div class="splash-trust">Catches ticker collisions · low-liq / rug-like tokens · never invents metrics</div>
+    <div class="splash-trust">Ticker collisions · low-liq / rug paths · Pro regime chips · never invents metrics</div>
   </div>
 
   <div id="floor">
     <div class="mock-banner" id="floorBanner">
       <span class="dot"></span>
       <span id="bannerText">Loading CMC Pro market floor…</span>
+    </div>
+
+    <div class="story-chrome" id="storyChrome">
+      <span class="sc-pulse" aria-hidden="true"></span>
+      <span class="sc-text">Bots clear Witness before they size. <b>ALLOW ≠ long/short.</b> <b class="sc-block">BLOCK = don’t touch.</b></span>
     </div>
 
     <header class="top">
@@ -85,7 +90,7 @@
       <span class="sess-chip cyan" id="sessFloor">Floor · loading</span>
       <span class="sess-chip on">MCP · before_you_trade</span>
       <span class="sess-chip" id="kpiReceiptsChip">Receipts · <b id="kpiReceipts">0</b></span>
-      <span class="sess-chip shock">Gate ≠ buy · Pro = context</span>
+      <span class="sess-chip shock">ALLOW ≠ long · Pro in score</span>
       <div class="toolbar-inline">
         <label class="act-mini">
           Load
@@ -93,7 +98,9 @@
         </label>
         <button class="act-mini" id="reloadBtn" type="button">Reload</button>
         <button class="act-mini" id="refreshFloorBtn" type="button">↻ Floor</button>
-        <button class="act-mini gold" id="theatreBtn" type="button">▶ Theatre</button>
+        <button class="act-mini" id="demoCollisionBtn" type="button">Fake BTC</button>
+        <button class="act-mini" id="demoRugBtn" type="button">Rug path</button>
+        <button class="act-mini gold" id="theatreBtn" type="button">▶ Duel</button>
       </div>
     </div>
 
@@ -198,7 +205,7 @@
             <span class="dot g"></span>
             <div>
               <div class="ph-t">Live gate</div>
-              <div class="ph-s">Symbol → verdict</div>
+              <div class="ph-s">Symbol → ALLOW / BLOCK</div>
             </div>
           </div>
           <button class="help-btn" type="button" data-modal="help-gate" aria-label="Gate help">?</button>
@@ -206,16 +213,20 @@
         <div class="panel-body gate-body">
           <form class="gate-form" id="gateForm">
             <div class="gf-row">
-              <input id="symInput" name="symbol" type="text" placeholder="BTC · ETH · RUG · 0x…" autocomplete="off" spellcheck="false" />
-              <button class="run-btn" type="submit" id="runGateBtn">Run</button>
+              <input id="symInput" name="symbol" type="text" placeholder="BTC · ETH · RUG · FAKEBTC · 0x…" autocomplete="off" spellcheck="false" />
+              <button class="run-btn" type="submit" id="runGateBtn">Gate</button>
             </div>
-            <p class="gf-hint" id="gateHint">Pro key when set · <code>/api/check</code></p>
+            <div class="demo-row">
+              <button type="button" class="demo-btn" id="gateDemoCollision">Fake BTC collision</button>
+              <button type="button" class="demo-btn danger" id="gateDemoRug">Rug / contract</button>
+            </div>
+            <p class="gf-hint" id="gateHint">ALLOW = okay to touch · NOT “go long” · Pro key feeds score</p>
           </form>
 
           <div class="verdict-block" id="verdictBlock" data-decision="">
             <div class="vb-top">
               <div>
-                <div class="vb-kicker">Verdict</div>
+                <div class="vb-kicker">Gate decision</div>
                 <div class="vb-word" id="verdictWord">STANDBY</div>
                 <div class="vb-sub" id="verdictSub">Awaiting symbol</div>
               </div>
@@ -225,6 +236,23 @@
               </div>
             </div>
             <div class="vb-sym" id="caseSymbol">—</div>
+            <div class="chip-row" id="reasonChips"></div>
+          </div>
+
+          <div class="contrast-block" id="contrastBlock" hidden>
+            <div class="contrast-h">Collision contrast</div>
+            <div class="contrast-grid">
+              <div class="contrast-card allow" id="contrastAllow">
+                <div class="cc-k">Canonical</div>
+                <div class="cc-v" id="contrastAllowWord">—</div>
+                <div class="cc-s" id="contrastAllowSub">—</div>
+              </div>
+              <div class="contrast-card block" id="contrastBlockCard">
+                <div class="cc-k">Junk ticker</div>
+                <div class="cc-v" id="contrastBlockWord">—</div>
+                <div class="cc-s" id="contrastBlockSub">—</div>
+              </div>
+            </div>
           </div>
 
           <div class="enrich-block" id="enrichBlock" hidden>
@@ -343,18 +371,45 @@
         </div>
       </article>
 
-      <article class="panel core dossier-panel">
+      <article class="panel core dossier-panel order-panel">
         <div class="ph">
           <div class="ph-l">
             <span class="dot ok"></span>
             <div>
-              <div class="ph-t" style="color:#e8edf4">Dossier</div>
-              <div class="ph-s" id="caseIdx">ROUND —</div>
+              <div class="ph-t" style="color:#e8edf4">Propose → Witness → Fill</div>
+              <div class="ph-s" id="caseIdx">ORDER TICKET</div>
             </div>
           </div>
-          <button class="help-btn" type="button" data-modal="help-dossier" aria-label="Dossier help">?</button>
+          <button class="help-btn" type="button" data-modal="help-dossier" aria-label="Order theatre help">?</button>
         </div>
         <div class="panel-body dossier-body">
+          <form class="order-form" id="orderForm">
+            <div class="of-row">
+              <div class="side-toggle" id="sideToggle" role="group" aria-label="Side">
+                <button type="button" class="side-btn on" data-side="BUY">BUY</button>
+                <button type="button" class="side-btn" data-side="SELL">SELL</button>
+              </div>
+              <input id="orderSym" type="text" value="BTC" maxlength="16" spellcheck="false" aria-label="Symbol" />
+              <input id="orderSize" type="number" value="1" min="0.01" step="any" aria-label="Size" />
+              <button class="run-btn order-run" type="submit" id="orderSubmit">Send</button>
+            </div>
+          </form>
+
+          <div class="hud-steps" id="hudSteps" data-step="0">
+            <div class="hud-step" data-s="1"><span class="hs-n">01</span><span class="hs-l">Propose</span></div>
+            <div class="hud-pipe"></div>
+            <div class="hud-step" data-s="2"><span class="hs-n">02</span><span class="hs-l">Witness</span></div>
+            <div class="hud-pipe"></div>
+            <div class="hud-step" data-s="3"><span class="hs-n">03</span><span class="hs-l">Fill</span></div>
+          </div>
+
+          <div class="fill-block" id="fillBlock" data-status="">
+            <div class="fb-kicker" id="fillKicker">Standing by</div>
+            <div class="fb-word" id="fillWord">—</div>
+            <div class="fb-sub" id="fillSub">Agent proposes · Witness gates · Fill or reject</div>
+            <div class="fb-id" id="fillReceipt">receipt · —</div>
+          </div>
+
           <div class="case-strip">
             <span class="cs-line" id="recklessLine">Load a duel or run the gate.</span>
           </div>
@@ -364,7 +419,7 @@
               <span class="oc-v" id="chainChipVal">0 linked · open →</span>
             </button>
             <button type="button" class="ops-chip duel" id="openDuelBtn">
-              <span class="oc-k">Duel theatre</span>
+              <span class="oc-k">Agent duel</span>
               <span class="oc-v" id="duelChipVal">Reckless vs Witness →</span>
             </button>
           </div>
@@ -381,8 +436,8 @@
 
     <footer class="foot">
       <span class="fc hash">CMC Witness</span>
-      <span class="fc">Never invents metrics</span>
-      <span class="fc ag">Pro market floor</span>
+      <span class="fc">ALLOW ≠ long/short</span>
+      <span class="fc ag">Pro in the score</span>
       <span class="fc">#BuildwithCMC</span>
     </footer>
   </div>
@@ -413,12 +468,12 @@
   <div id="duelMount" hidden>
     <div class="duel-stage" id="duelStage">
       <div class="actor reckless-actor">
-        <p class="actor-label">Reckless Agent</p>
+        <p class="actor-label">Agent propose</p>
         <div class="bubble" id="proposeBubble">—</div>
       </div>
       <div class="vs-chip">VS</div>
       <div class="actor witness-actor">
-        <p class="actor-label">Witness</p>
+        <p class="actor-label">Witness gate</p>
         <div class="bubble judgment" id="judgeBubble">—</div>
       </div>
     </div>

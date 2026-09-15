@@ -42,6 +42,7 @@ export class FixtureCmcClient implements CmcClient {
     if (sym === "BTC") return loadJson("btc-quote.json");
     if (sym === "ETH") return loadJson("eth-quote.json");
     if (sym === "RUG") return loadJson("scammy-quote.json");
+    if (sym === "FAKEBTC" || sym === "BTCJUNK") return loadJson("fake-btc-quote.json");
 
     // Contract-looking addresses → treat as unknown/scammy for offline demos
     if (/^0X[A-F0-9]{8,}$/.test(sym)) {
@@ -65,7 +66,7 @@ export class FixtureCmcClient implements CmcClient {
     if (hit) return quoteFromListing(hit);
 
     throw new Error(
-      `Fixture mode has no quote for "${sym}". Available: BTC, ETH, RUG, + listings symbols. ` +
+      `Fixture mode has no quote for "${sym}". Available: BTC, ETH, RUG, FAKEBTC, + listings symbols. ` +
         `Set CMC_WITNESS_MODE=x402|key or provide live credentials.`,
     );
   }
@@ -77,13 +78,13 @@ export class FixtureCmcClient implements CmcClient {
   async dexSearch(keyword: string): Promise<DexSearchResponse> {
     const kw = keyword.trim().toLowerCase();
     // RUG / dust / contracts get empty-ish or scam-oriented dex fixture flavor
-    if (kw === "rug" || kw.startsWith("0x") || kw === "dust" || kw === "tail") {
+    if (kw === "rug" || kw === "fakebtc" || kw === "btcjunk" || kw.startsWith("0x") || kw === "dust" || kw === "tail") {
       const base = await loadJson<DexSearchResponse>("dex-search.json");
       return {
         ...base,
         data: {
           tokens:
-            kw === "rug" || kw.startsWith("0x")
+            kw === "rug" || kw === "fakebtc" || kw === "btcjunk" || kw.startsWith("0x")
               ? []
               : [
                   {

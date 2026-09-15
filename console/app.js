@@ -97,6 +97,27 @@ const els = {
   duelChipVal: document.getElementById("duelChipVal"),
   duelMount: document.getElementById("duelMount"),
   allowHelpBtn: document.getElementById("allowHelpBtn"),
+  reasonChips: document.getElementById("reasonChips"),
+  contrastBlock: document.getElementById("contrastBlock"),
+  contrastAllowWord: document.getElementById("contrastAllowWord"),
+  contrastAllowSub: document.getElementById("contrastAllowSub"),
+  contrastBlockWord: document.getElementById("contrastBlockWord"),
+  contrastBlockSub: document.getElementById("contrastBlockSub"),
+  demoCollisionBtn: document.getElementById("demoCollisionBtn"),
+  demoRugBtn: document.getElementById("demoRugBtn"),
+  gateDemoCollision: document.getElementById("gateDemoCollision"),
+  gateDemoRug: document.getElementById("gateDemoRug"),
+  orderForm: document.getElementById("orderForm"),
+  orderSym: document.getElementById("orderSym"),
+  orderSize: document.getElementById("orderSize"),
+  orderSubmit: document.getElementById("orderSubmit"),
+  sideToggle: document.getElementById("sideToggle"),
+  hudSteps: document.getElementById("hudSteps"),
+  fillBlock: document.getElementById("fillBlock"),
+  fillKicker: document.getElementById("fillKicker"),
+  fillWord: document.getElementById("fillWord"),
+  fillSub: document.getElementById("fillSub"),
+  fillReceipt: document.getElementById("fillReceipt"),
 };
 
 const state = {
@@ -114,19 +135,19 @@ const state = {
 const HELP = {
   "help-gate": {
     title: "Live gate",
-    body: `<p>Type a ticker (<b>BTC</b>) or contract. The gate scores CMC evidence and returns <b>ALLOW / CAUTION / BLOCK</b> — the same call other bots must clear before sizing.</p><p>When a Pro key is present, performance stats + OHLCV spark attach below.</p>`,
+    body: `<p>Type a ticker (<b>BTC</b>) or contract. The gate scores CMC evidence — including Pro Fear&amp;Greed, BTC.D, ATH drawdown, OHLCV range when available — and returns <b>ALLOW / CAUTION / BLOCK</b>.</p><p><b>ALLOW = okay to touch, NOT “go long.”</b> Demo buttons: Fake BTC collision · Rug / contract.</p>`,
   },
   "help-dossier": {
-    title: "Dossier evidence",
-    body: `<p>Each row is a real CMC API call on the receipt — quotes, listings, optional DEX search. Credits and timestamps prove what the gate saw.</p><p>Witness <b>never invents RSI</b>. Fear&amp;Greed lives on the market floor KPIs, not on the receipt.</p>`,
+    title: "Propose → Witness → Fill",
+    body: `<p>Simulated agent order ticket. Agent proposes BUY/SELL · Witness runs <code>before_you_trade</code> · result is <b>FILL allowed</b> or <b>REJECTED by Witness</b> with a receipt id.</p><p>Every evidence row is a real CMC endpoint call. Never invents RSI.</p>`,
   },
   allow: {
     title: "What is ALLOW?",
-    body: `<p><b>Gate ≠ buy.</b> ALLOW / CAUTION / BLOCK is a pre-trade referee verdict other agents clear via <code>before_you_trade</code> before sizing.</p>
-<p><b>ALLOW</b> — CMC evidence looks liquid / identifiable enough to proceed (still not advice).</p>
-<p><b>CAUTION</b> — thin books, odd rank, or incomplete identity — size carefully or investigate more.</p>
-<p><b>BLOCK</b> — rug-like / unresolvable / dangerous collision — do not size.</p>
-<p>Pro panels (mcap, F&amp;G, movers, sparklines) are <b>market context from CMC</b>, not the gate inventing indicators.</p>`,
+    body: `<p><b>Bots clear Witness before they size.</b> ALLOW ≠ long/short. BLOCK = don’t touch.</p>
+<p><b>ALLOW</b> — okay to touch (liquid / identifiable enough). Not a buy signal.</p>
+<p><b>CAUTION</b> — thin books, regime stress, or incomplete identity — size carefully.</p>
+<p><b>BLOCK</b> — rug-like / collision / dangerous — do not touch.</p>
+<p>Pro chips (F&amp;G, BTC.D, ATH, OHLCV range) enter the score only when CMC returned them.</p>`,
   },
 };
 
@@ -398,14 +419,49 @@ function renderEnrichment(data) {
   else els.sparkSvg.innerHTML = "";
 }
 
-function applyVerdictView({ decision, score, symbol, sub, caseIdx, recklessLine, reasons, evidence, enrichment }) {
+function chipClass(label) {
+  const s = String(label || "").toLowerCase();
+  if (/collision|block|rug|low mcap|low vol|spike|parabolic|0 dex/.test(s)) return "bad";
+  if (/greed|fear|caution|thin|ath|range|unlock|rank/.test(s)) return "warn";
+  if (/allow|pairs|healthy/.test(s)) return "ok";
+  return "";
+}
+
+function renderReasonChips(chips) {
+  if (!els.reasonChips) return;
+  const list = chips ?? [];
+  if (!list.length) {
+    els.reasonChips.innerHTML = "";
+    return;
+  }
+  els.reasonChips.innerHTML = list
+    .map((c) => `<span class="rchip ${chipClass(c)}">${escapeHtml(c)}</span>`)
+    .join("");
+}
+
+function hideContrast() {
+  if (els.contrastBlock) els.contrastBlock.hidden = true;
+}
+
+function showContrast(payload) {
+  if (!els.contrastBlock) return;
+  const a = payload.canonical ?? {};
+  const j = payload.junk ?? {};
+  els.contrastAllowWord.textContent = String(a.decision || "—").toUpperCase();
+  els.contrastAllowSub.textContent = `${a.label || "Canonical"} · score ${a.score ?? "—"}`;
+  els.contrastBlockWord.textContent = String(j.decision || "—").toUpperCase();
+  els.contrastBlockSub.textContent = `${j.label || "Junk"} · score ${j.score ?? "—"}`;
+  els.contrastBlock.hidden = false;
+}
+
+function applyVerdictView({ decision, score, symbol, sub, caseIdx, recklessLine, reasons, evidence, enrichment, reason_chips, keepContrast }) {
   const d = decision || "";
   els.verdictBlock.dataset.decision = d;
   els.verdictWord.textContent = d ? String(d).toUpperCase() : "STANDBY";
   els.verdictSub.textContent = sub || "Awaiting symbol or duel round";
   els.scoreValue.textContent = score == null || score === "" ? "—" : String(score);
   els.caseSymbol.textContent = symbol || "—";
-  els.caseIdx.textContent = caseIdx || "ROUND —";
+  if (els.caseIdx && caseIdx) els.caseIdx.textContent = caseIdx;
   els.recklessLine.textContent = recklessLine || "Load a duel report or run the gate.";
   els.kpiLast.textContent = d ? String(d).toUpperCase() : "—";
   els.kpiLast.style.color =
@@ -413,6 +469,8 @@ function applyVerdictView({ decision, score, symbol, sub, caseIdx, recklessLine,
 
   const rs = reasons ?? [];
   els.reasonsList.innerHTML = rs.map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+  renderReasonChips(reason_chips);
+  if (!keepContrast) hideContrast();
 
   const rows = evidence ?? [];
   if (!rows.length) {
@@ -445,6 +503,7 @@ function renderVerdict(round) {
     caseIdx: `ROUND ${round.index ?? state.index + 1}`,
     recklessLine: round.reckless_line || "",
     reasons: round.reasons ?? [],
+    reason_chips: round.reason_chips ?? [],
     evidence: evidenceForRound(round),
   });
 }
@@ -541,7 +600,7 @@ function selectRound(i, { animate = false } = {}) {
 function stopTheatre() {
   state.theatre = false;
   els.theatreBtn.classList.remove("active");
-  els.theatreBtn.textContent = "▶ Theatre";
+  els.theatreBtn.textContent = "▶ Duel";
   if (state.theatreTimer) {
     clearInterval(state.theatreTimer);
     state.theatreTimer = null;
@@ -591,12 +650,16 @@ function loadReport(report) {
   selectRound(0, { animate: true });
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
-  const data = await res.json().catch(() => ({}));
+async function fetchJson(url, opts) {
+  const res = await fetch(url, opts);
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
   if (!res.ok) {
-    const err = new Error(data.error || `${url} ${res.status}`);
-    err.status = res.status;
+    const err = new Error((data && data.error) || res.statusText || `HTTP ${res.status}`);
     err.body = data;
     throw err;
   }
@@ -693,7 +756,7 @@ function mountDuelIntoDrawer() {
 }
 
 function openDuelDrawer() {
-  openDrawer({ kicker: "Duel theatre", title: "Reckless vs Witness", mode: "duel", bodyHtml: "" });
+  openDrawer({ kicker: "Agent duel", title: "Propose vs Witness", mode: "duel", bodyHtml: "" });
   mountDuelIntoDrawer();
 }
 
@@ -896,10 +959,11 @@ async function runLiveGate(symbol) {
       decision,
       score: data.score,
       symbol: receipt.symbol || sym,
-      sub: `Live · ${data.mode ?? receipt.auth_mode ?? "?"} · h${receipt.chain_height ?? "—"}`,
+      sub: `Live · ${data.mode ?? receipt.auth_mode ?? "?"} · h${receipt.chain_height ?? "—"} · ALLOW ≠ long`,
       caseIdx: "LIVE CHECK",
-      recklessLine: `Agent proposed ${sym} — Witness scored from CMC evidence.`,
+      recklessLine: `Agent proposed ${sym} — Witness scored from CMC evidence (Pro when available).`,
       reasons: data.reasons ?? [],
+      reason_chips: data.reason_chips ?? [],
       evidence: receipt.evidence ?? [],
       enrichment: {
         price_performance: data.price_performance,
@@ -1013,6 +1077,175 @@ async function boot() {
   const n = Number(q);
   if (Number.isFinite(n) && n >= 1) selectRound(n - 1, { animate: true });
 }
+
+
+/* ===== Floor demos + order theatre ===== */
+state.orderSide = "BUY";
+
+function setHudStep(n, cls) {
+  if (!els.hudSteps) return;
+  els.hudSteps.dataset.step = String(n);
+  els.hudSteps.classList.remove("ok", "bad");
+  if (cls) els.hudSteps.classList.add(cls);
+}
+
+function setFillView({ status, kicker, word, sub, receiptId }) {
+  if (!els.fillBlock) return;
+  els.fillBlock.dataset.status = status || "";
+  els.fillKicker.textContent = kicker || "Standing by";
+  els.fillWord.textContent = word || "—";
+  els.fillSub.textContent = sub || "Agent proposes · Witness gates · Fill or reject";
+  els.fillReceipt.textContent = receiptId ? `receipt · ${receiptId}` : "receipt · —";
+}
+
+async function runCollisionDemo() {
+  const btns = [els.demoCollisionBtn, els.gateDemoCollision].filter(Boolean);
+  btns.forEach((b) => (b.disabled = true));
+  els.gateHint.textContent = "Running Fake BTC collision demo…";
+  try {
+    const data = await fetchJson("/api/demo/collision");
+    showContrast(data);
+    const junk = data.junk ?? {};
+    const canon = data.canonical ?? {};
+    applyVerdictView({
+      decision: junk.decision,
+      score: junk.score,
+      symbol: junk.receipt?.symbol || "BTC (spoof)",
+      sub: "Junk BTC ticker vs canonical — BLOCK / ALLOW contrast",
+      caseIdx: "DEMO · COLLISION",
+      recklessLine: data.copy || "ALLOW = okay to touch, NOT go long. BLOCK = don’t touch.",
+      reasons: [
+        `Canonical BTC → ${String(canon.decision || "").toUpperCase()} (${canon.score})`,
+        `Junk BTC ticker → ${String(junk.decision || "").toUpperCase()} (${junk.score})`,
+        ...(junk.reasons ?? []).slice(0, 6),
+      ],
+      reason_chips: junk.reason_chips ?? ["TICKER COLLISION"],
+      evidence: junk.receipt?.evidence ?? [],
+      keepContrast: true,
+    });
+    toast(`Collision demo · CANON ${String(canon.decision).toUpperCase()} vs JUNK ${String(junk.decision).toUpperCase()}`);
+    els.gateHint.innerHTML = `Demo · Fake BTC collision · <b>ALLOW ≠ long</b>`;
+  } catch (err) {
+    toast(`Collision demo failed: ${err.message}`);
+    els.gateHint.textContent = `Demo failed — ${err.message}`;
+  } finally {
+    btns.forEach((b) => (b.disabled = false));
+  }
+}
+
+async function runRugDemo() {
+  const btns = [els.demoRugBtn, els.gateDemoRug].filter(Boolean);
+  btns.forEach((b) => (b.disabled = true));
+  els.gateHint.textContent = "Running rug / low-liq path…";
+  try {
+    const data = await fetchJson("/api/demo/rug");
+    const r = data.result ?? {};
+    hideContrast();
+    applyVerdictView({
+      decision: r.decision,
+      score: r.score,
+      symbol: r.receipt?.symbol || "RUG",
+      sub: "Scammy / low-liq path — expect BLOCK",
+      caseIdx: "DEMO · RUG",
+      recklessLine: data.copy || "BLOCK = don’t touch.",
+      reasons: r.reasons ?? [],
+      reason_chips: r.reason_chips ?? [],
+      evidence: r.receipt?.evidence ?? [],
+    });
+    toast(`Rug demo · ${String(r.decision).toUpperCase()} · score ${r.score}`);
+    els.gateHint.innerHTML = `Demo · Rug / contract · <b>BLOCK = don’t touch</b>`;
+  } catch (err) {
+    toast(`Rug demo failed: ${err.message}`);
+  } finally {
+    btns.forEach((b) => (b.disabled = false));
+  }
+}
+
+async function runOrderTheatre(e) {
+  e?.preventDefault?.();
+  const side = state.orderSide || "BUY";
+  const symbol = String(els.orderSym?.value || "BTC").trim().toUpperCase();
+  const size = Number(els.orderSize?.value || 1);
+  if (!symbol) {
+    toast("Enter a symbol");
+    return;
+  }
+  if (els.orderSubmit) els.orderSubmit.disabled = true;
+  setHudStep(1);
+  setFillView({
+    status: "",
+    kicker: "Step 01 · Propose",
+    word: `${side} ${symbol}`,
+    sub: `Size ${size} · agent ticket submitted`,
+    receiptId: null,
+  });
+  await new Promise((r) => setTimeout(r, 320));
+  setHudStep(2);
+  setFillView({
+    status: "",
+    kicker: "Step 02 · Witness",
+    word: "GATING…",
+    sub: "before_you_trade · dossier + Pro context",
+    receiptId: null,
+  });
+  try {
+    const data = await fetchJson("/api/demo/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ side, symbol, size, mode: "fixture" }),
+    });
+    const fill = data.fill ?? {};
+    const gate = data.gate ?? {};
+    const ok = fill.status === "FILL allowed";
+    setHudStep(3, ok ? "ok" : "bad");
+    setFillView({
+      status: fill.status,
+      kicker: ok ? "Step 03 · Fill" : "Step 03 · Rejected",
+      word: fill.status || "—",
+      sub: fill.note || data.copy || "",
+      receiptId: data.receipt_id || gate.receipt_id,
+    });
+    applyVerdictView({
+      decision: gate.decision,
+      score: gate.score,
+      symbol,
+      sub: `${side} ${size} ${symbol} · ${fill.status}`,
+      caseIdx: "ORDER TICKET",
+      recklessLine: `Agent proposed ${side} ${size} ${symbol}. Witness: ${String(gate.decision || "").toUpperCase()}.`,
+      reasons: gate.reasons ?? [],
+      reason_chips: gate.reason_chips ?? [],
+      evidence: [],
+    });
+    // pull evidence from a quick check if needed — receipt id shown
+    toast(`${fill.status} · ${symbol} · ${gate.receipt_id?.slice?.(0, 8) || "receipt"}…`);
+    await loadReceipts();
+    tickNumber(els.kpiReceipts, state.receipts.length);
+  } catch (err) {
+    setHudStep(3, "bad");
+    setFillView({
+      status: "REJECTED by Witness",
+      kicker: "Error",
+      word: "REJECTED by Witness",
+      sub: err.message,
+      receiptId: null,
+    });
+    toast(`Order theatre failed: ${err.message}`);
+  } finally {
+    if (els.orderSubmit) els.orderSubmit.disabled = false;
+  }
+}
+
+els.demoCollisionBtn?.addEventListener("click", runCollisionDemo);
+els.gateDemoCollision?.addEventListener("click", runCollisionDemo);
+els.demoRugBtn?.addEventListener("click", runRugDemo);
+els.gateDemoRug?.addEventListener("click", runRugDemo);
+els.orderForm?.addEventListener("submit", runOrderTheatre);
+els.sideToggle?.querySelectorAll(".side-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    state.orderSide = btn.getAttribute("data-side") || "BUY";
+    els.sideToggle.querySelectorAll(".side-btn").forEach((b) => b.classList.toggle("on", b === btn));
+  });
+});
 
 boot();
 setInterval(() => loadMarketFloor(), 60_000);

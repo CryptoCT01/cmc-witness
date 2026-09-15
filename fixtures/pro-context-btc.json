@@ -1,0 +1,48 @@
+{
+  "pro": {
+    "source": "fixture-mock",
+    "fear_greed": { "value": 55, "classification": "Neutral", "update_time": null },
+    "btc_dominance": 54.2,
+    "eth_dominance": 12.8,
+    "price_performance": {
+      "all_time_high": 126000,
+      "all_time_low": 0.05,
+      "close": 95432,
+      "ath_drawdown_pct": 24.26,
+      "percent_change_all_time": null
+    },
+    "ohlcv_volatility": {
+      "days": 14,
+      "high": 98000,
+      "low": 91000,
+      "range_pct": 7.41,
+      "closes": [92000, 93000, 92500, 94000, 95000, 94500, 96000, 95500, 97000, 96500, 95432, 95800, 95200, 95432]
+    }
+  },
+  "evidence": [
+    {
+      "endpoint": "/v3/fear-and-greed/latest",
+      "used_for": "Fear & Greed regime caution when extreme",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "value": 55, "classification": "Neutral" }
+    },
+    {
+      "endpoint": "/v1/global-metrics/quotes/latest",
+      "used_for": "BTC/ETH dominance regime context",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "btc_dominance": 54.2, "eth_dominance": 12.8 }
+    },
+    {
+      "endpoint": "/v2/cryptocurrency/price-performance-stats/latest",
+      "used_for": "ATH distance / cycle drawdown from price-performance stats",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "ath": 126000, "ath_drawdown_pct": 24.26 }
+    },
+    {
+      "endpoint": "/v2/cryptocurrency/ohlcv/historical",
+      "used_for": "Recent OHLCV range / volatility (7–14d)",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "days": 14, "range_pct": 7.41 }
+    }
+  ]
+}

@@ -22,3 +22,18 @@ export type {
 } from "./types.js";
 export type { ChainVerifyResult, ChainTip } from "./receipt.js";
 export type { InvestigateOptions, DossierBundle } from "./dossier.js";
+
+export {
+  gatherProContext,
+  applyProScoring,
+  detectCollision,
+  CANONICAL_IDS,
+} from "./pro-context.js";
+export type {
+  ProContext,
+  ProContextBundle,
+  FearGreedCtx,
+  PricePerfCtx,
+  OhlcvVolCtx,
+  CollisionCtx,
+} from "./pro-context.js";

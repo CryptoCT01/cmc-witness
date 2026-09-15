@@ -51,6 +51,20 @@ export interface MarketReceipt {
     };
     /** DEX hit count when dex/search was invoked. */
     dex_hits?: number;
+    /** Pro Fear & Greed when gathered for scoring. */
+    fear_greed?: { value: number; classification: string };
+    /** BTC dominance from global metrics when gathered. */
+    btc_dominance?: number | null;
+    /** ETH dominance from global metrics when gathered. */
+    eth_dominance?: number | null;
+    /** ATH drawdown % from price-performance when gathered. */
+    ath_drawdown_pct?: number | null;
+    /** Recent OHLCV range % when gathered. */
+    ohlcv_range_pct?: number | null;
+    ohlcv_days?: number | null;
+    /** Ticker collision signal when detected. */
+    ticker_collision?: boolean;
+    collision_note?: string;
   };
   /** Per-endpoint evidence trail (v2 dossier). */
   evidence: EvidenceEntry[];
@@ -72,6 +86,8 @@ export interface GateResult {
   /** 0–100; higher = healthier / safer to trade. */
   score: number;
   reasons: string[];
+  /** Short UI chips for Pro / collision signals actually observed. */
+  reason_chips: string[];
   receipt: MarketReceipt;
 }
 

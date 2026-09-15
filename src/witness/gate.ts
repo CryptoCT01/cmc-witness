@@ -8,13 +8,14 @@ import {
 } from "./receipt.js";
 import type { Decision, EvidenceEntry, GateResult, MarketReceipt } from "./types.js";
 import { extractUsd } from "./types.js";
+import { applyProScoring, type ProContext } from "./pro-context.js";
 
 export interface BeforeYouTradeOptions {
   /** Persist JSONL receipt (default true). */
   persist?: boolean;
   logPath?: string;
   /**
-   * Multi-endpoint Market Dossier (quotes + listings + conditional dex).
+   * Multi-endpoint Market Dossier (quotes + listings + conditional dex + Pro).
    * Default true — Court of Markets enhancement.
    */
   dossier?: boolean;
@@ -32,10 +33,12 @@ export function evaluateAsset(input: {
   evidence?: EvidenceEntry[];
   observedExtras?: Partial<MarketReceipt["observed"]>;
   chain?: { prev_hash: string | null; chain_height: number };
+  pro?: ProContext;
 }): GateResult {
   const { asset, authMode, statusTimestamp } = input;
   const usd = extractUsd(asset);
   const reasons: string[] = [];
+  const chips: string[] = [];
   let score = 100;
 
   const mcap = usd.market_cap ?? 0;
@@ -51,9 +54,11 @@ export function evaluateAsset(input: {
   if (mcap < 50_000) {
     score -= 45;
     reasons.push(`Very low market cap ($${mcap.toLocaleString()}) — illiquid / high rug risk`);
+    chips.push("low mcap");
   } else if (mcap < 1_000_000) {
     score -= 25;
     reasons.push(`Low market cap ($${mcap.toLocaleString()})`);
+    chips.push("thin mcap");
   } else if (mcap < 50_000_000) {
     score -= 10;
     reasons.push(`Mid-small market cap ($${mcap.toLocaleString()})`);
@@ -64,9 +69,11 @@ export function evaluateAsset(input: {
   if (vol < 25_000) {
     score -= 30;
     reasons.push(`Extremely low 24h volume ($${vol.toLocaleString()})`);
+    chips.push("low vol");
   } else if (vol < 250_000) {
     score -= 15;
     reasons.push(`Low 24h volume ($${vol.toLocaleString()})`);
+    chips.push("thin vol");
   } else {
     reasons.push(`Healthy 24h volume ($${Math.round(vol).toLocaleString()})`);
   }
@@ -75,6 +82,7 @@ export function evaluateAsset(input: {
   if (ch1h >= 20) {
     score -= 25;
     reasons.push(`Extreme 1h move (${usd.percent_change_1h}%)`);
+    chips.push("1h spike");
   } else if (ch1h >= 8) {
     score -= 12;
     reasons.push(`Elevated 1h volatility (${usd.percent_change_1h}%)`);
@@ -83,6 +91,7 @@ export function evaluateAsset(input: {
   if (ch24 >= 40) {
     score -= 25;
     reasons.push(`Extreme 24h move (${usd.percent_change_24h}%)`);
+    chips.push("24h spike");
   } else if (ch24 >= 15) {
     score -= 10;
     reasons.push(`Elevated 24h volatility (${usd.percent_change_24h}%)`);
@@ -91,12 +100,14 @@ export function evaluateAsset(input: {
   if (ch7d >= 100) {
     score -= 15;
     reasons.push(`Parabolic / crash 7d move (${usd.percent_change_7d}%)`);
+    chips.push("7d parabolic");
   }
 
   // Market structure
   if (pairs > 0 && pairs < 5) {
     score -= 15;
     reasons.push(`Few market pairs (${pairs})`);
+    chips.push(`${pairs} pairs`);
   } else if (pairs >= 50) {
     reasons.push(`Broad venue coverage (${pairs} market pairs)`);
   }
@@ -108,6 +119,7 @@ export function evaluateAsset(input: {
       reasons.push(
         `Tiny circulating / total supply ratio (${(unlocked * 100).toFixed(2)}%) — unlock risk`,
       );
+      chips.push("unlock risk");
     }
   }
 
@@ -117,13 +129,18 @@ export function evaluateAsset(input: {
   } else if (asset.cmc_rank != null && asset.cmc_rank > 2000) {
     score -= 10;
     reasons.push(`Low CMC rank (#${asset.cmc_rank})`);
+    chips.push(`rank #${asset.cmc_rank}`);
   }
 
   // DEX dossier signal (only when observed)
   if (input.observedExtras?.dex_hits === 0) {
     score -= 5;
     reasons.push("No DEX search hits observed for this symbol");
+    chips.push("0 DEX hits");
   }
+
+  // Pro-smart layers (only when gathered — never invent)
+  score = applyProScoring(score, reasons, chips, input.pro);
 
   score = Math.max(0, Math.min(100, Math.round(score)));
 
@@ -132,12 +149,20 @@ export function evaluateAsset(input: {
   else if (score < 70) decision = "caution";
   else decision = "allow";
 
+  // Hard block on confirmed ticker collision regardless of residual score
+  if (input.pro?.collision?.is_non_canonical) {
+    decision = "block";
+    score = Math.min(score, 25);
+  }
+
   if (decision === "block") {
-    reasons.unshift(`Gate decision: BLOCK (score ${score}/100)`);
+    reasons.unshift(`Gate decision: BLOCK (score ${score}/100) — do not touch`);
   } else if (decision === "caution") {
-    reasons.unshift(`Gate decision: CAUTION (score ${score}/100)`);
+    reasons.unshift(`Gate decision: CAUTION (score ${score}/100) — proceed carefully`);
   } else {
-    reasons.unshift(`Gate decision: ALLOW (score ${score}/100)`);
+    reasons.unshift(
+      `Gate decision: ALLOW (score ${score}/100) — okay to touch, NOT a long/short signal`,
+    );
   }
 
   const receipt = createMarketReceipt(asset, authMode, statusTimestamp, {
@@ -155,12 +180,12 @@ export function evaluateAsset(input: {
   });
   rememberReceipt(receipt);
 
-  return { decision, score, reasons, receipt };
+  return { decision, score, reasons, reason_chips: chips, receipt };
 }
 
 /**
  * Core agent tool. By default runs the multi-endpoint Market Dossier
- * (quotes + listings + conditional dex) and appends a chained v2 receipt.
+ * (quotes + listings + conditional dex + Pro) and appends a chained v2 receipt.
  */
 export async function beforeYouTrade(
   client: CmcClient,

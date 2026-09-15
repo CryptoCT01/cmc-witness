@@ -13,7 +13,9 @@ Witness dossier: quotes + listings + conditional dex/search
 JUDGMENT + Market Receipt v2 (evidence[] · prev_hash · chain_height)
 ```
 
-**Why this wows:** not another “AI that reads a quote.” It’s a **courtroom demo** — duel the reckless agent, inspect endpoint evidence, verify the chain, open a dark crypto-native console. Metrics on the **receipt** are **only** what CMC returned for the gate. Witness **never invents** RSI or synthetic indicators. The console market floor shows **CMC’s own** Fear&Greed / Altcoin Season as labeled Pro context — not invented by Witness.
+**Pro-smart gate:** live key mode pulls Fear & Greed, BTC.D, ATH drawdown, and OHLCV range into the score (reason chips — never invents metrics). Fixture mode stays offline-deterministic.
+
+**Why this wows:** not another “AI that reads a quote.” It’s a **courtroom demo** — duel the reckless agent, inspect endpoint evidence, verify the chain, open a dark crypto-native console. Metrics on the **receipt** are **only** what CMC returned for the gate. Witness **never invents** RSI or synthetic indicators. Fear&Greed / BTC.D / ATH / OHLCV enter the **gate score** when CMC returned them; the floor also shows Pro series as labeled context — never invented.
 
 ---
 

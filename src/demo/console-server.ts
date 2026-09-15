@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Lightweight static server for the CMC Witness Pre-trade Gate console.
- * Serves ./console, ./duel-report.json, receipt chain JSON, /api/market-floor, and /api/check.
+ * Serves ./console, ./duel-report.json, receipt chain JSON, /api/market-floor, /api/check, demos.
  */
 import { config as loadEnv } from "dotenv";
 import { createServer } from "node:http";
@@ -89,6 +89,7 @@ async function runCheck(symbol: string, modeHint?: string | null) {
     decision: result.decision,
     score: result.score,
     reasons: result.reasons,
+    reason_chips: result.reason_chips,
     receipt: result.receipt,
     mode: client.mode,
     ...(enrichment
@@ -102,6 +103,11 @@ async function runCheck(symbol: string, modeHint?: string | null) {
         }
       : {}),
   };
+}
+
+/** Floor demos force fixture mode so the contrast is offline-deterministic. */
+async function runDemoCheck(symbol: string) {
+  return runCheck(symbol, "fixture");
 }
 
 const server = createServer(async (req, res) => {
@@ -161,6 +167,96 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  /** One-click: canonical BTC ALLOW vs junk BTC-ticker BLOCK contrast. */
+  if (path === "/api/demo/collision") {
+    try {
+      const [canonical, junk] = await Promise.all([
+        runDemoCheck("BTC"),
+        runDemoCheck("FAKEBTC"),
+      ]);
+      json(res, 200, {
+        demo: "fake-btc-collision",
+        copy: "ALLOW = okay to touch, NOT “go long”. BLOCK = don’t touch.",
+        canonical: { label: "Canonical BTC (id 1)", ...canonical },
+        junk: { label: "Junk BTC ticker (spoof id)", ...junk },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      json(res, 500, { error: message });
+    }
+    return;
+  }
+
+  /** One-click: scammy / low-liq path → BLOCK. */
+  if (path === "/api/demo/rug") {
+    try {
+      const result = await runDemoCheck("RUG");
+      json(res, 200, {
+        demo: "rug-contract",
+        copy: "BLOCK = don’t touch. Low liq / extreme moves / weak DEX.",
+        result,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      json(res, 500, { error: message });
+    }
+    return;
+  }
+
+  /** Propose → Witness → Fill theatre ticket. */
+  if (path === "/api/demo/order" && req.method === "POST") {
+    try {
+      const chunks: Buffer[] = [];
+      for await (const c of req) chunks.push(c as Buffer);
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as {
+        side?: string;
+        symbol?: string;
+        size?: number | string;
+        mode?: string;
+      };
+      const side = String(body.side ?? "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
+      const symbol = String(body.symbol ?? "BTC").trim().toUpperCase() || "BTC";
+      const size = Number(body.size ?? 1);
+      const gate = await runCheck(symbol, body.mode ?? "fixture");
+      const fillAllowed = gate.decision === "allow" || gate.decision === "caution";
+      json(res, 200, {
+        demo: "propose-witness-fill",
+        ticket: {
+          side,
+          symbol,
+          size: Number.isFinite(size) ? size : 1,
+          proposed_at: new Date().toISOString(),
+        },
+        gate: {
+          decision: gate.decision,
+          score: gate.score,
+          reasons: gate.reasons,
+          reason_chips: gate.reason_chips,
+          receipt_id: gate.receipt?.id,
+          mode: gate.mode,
+        },
+        fill: fillAllowed
+          ? {
+              status: "FILL allowed",
+              note:
+                gate.decision === "caution"
+                  ? "CAUTION — fill permitted with reduced conviction; ALLOW ≠ long/short."
+                  : "FILL allowed — Witness cleared touch. ALLOW ≠ go long/short.",
+            }
+          : {
+              status: "REJECTED by Witness",
+              note: "BLOCK — do not touch. Order rejected before size.",
+            },
+        receipt_id: gate.receipt?.id,
+        copy: "Bots clear Witness before they size. ALLOW ≠ long/short. BLOCK = don’t touch.",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      json(res, 500, { error: message });
+    }
+    return;
+  }
+
   if (path === "/") path = "/index.html";
   const filePath = resolve(join(CONSOLE_DIR, path));
   if (!filePath.startsWith(CONSOLE_DIR)) {
@@ -184,7 +280,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`\n◆  CMC Witness · Pre-trade Gate console`);
   console.log(`   http://127.0.0.1:${PORT}  (also 0.0.0.0)`);
   console.log(
-    `   APIs: /api/market-floor  ·  /duel-report.json  ·  /api/receipts  ·  /api/check?symbol=BTC`,
+    `   APIs: /api/market-floor · /api/check · /api/demo/collision · /api/demo/rug · POST /api/demo/order`,
   );
   console.log(`   Load duel: pnpm witness duel --fixture  (then refresh)\n`);
 });

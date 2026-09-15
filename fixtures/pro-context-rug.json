@@ -1,0 +1,48 @@
+{
+  "pro": {
+    "source": "fixture-mock",
+    "fear_greed": { "value": 82, "classification": "Extreme Greed", "update_time": null },
+    "btc_dominance": 54.2,
+    "eth_dominance": 12.8,
+    "price_performance": {
+      "all_time_high": 0.05,
+      "all_time_low": 0.000001,
+      "close": 0.000012,
+      "ath_drawdown_pct": 99.976,
+      "percent_change_all_time": null
+    },
+    "ohlcv_volatility": {
+      "days": 7,
+      "high": 0.00004,
+      "low": 0.000004,
+      "range_pct": 163.64,
+      "closes": [0.00001, 0.00002, 0.00004, 0.000015, 0.000008, 0.000005, 0.000012]
+    }
+  },
+  "evidence": [
+    {
+      "endpoint": "/v3/fear-and-greed/latest",
+      "used_for": "Fear & Greed regime caution when extreme",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "value": 82, "classification": "Extreme Greed" }
+    },
+    {
+      "endpoint": "/v1/global-metrics/quotes/latest",
+      "used_for": "BTC/ETH dominance regime context",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "btc_dominance": 54.2 }
+    },
+    {
+      "endpoint": "/v2/cryptocurrency/price-performance-stats/latest",
+      "used_for": "ATH distance / cycle drawdown from price-performance stats",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "ath_drawdown_pct": 99.976 }
+    },
+    {
+      "endpoint": "/v2/cryptocurrency/ohlcv/historical",
+      "used_for": "Recent OHLCV range / volatility (7–14d)",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "days": 7, "range_pct": 163.64 }
+    }
+  ]
+}

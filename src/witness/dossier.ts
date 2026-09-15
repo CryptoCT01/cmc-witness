@@ -3,12 +3,15 @@ import type { AuthMode, CmcClient, CryptoAsset, DexSearchToken } from "../cmc/ty
 import type { EvidenceEntry, GateResult } from "./types.js";
 import { evaluateAsset } from "./gate.js";
 import { appendReceiptLog, readChainTip, defaultReceiptLogPath } from "./receipt.js";
+import { gatherProContext, type ProContext } from "./pro-context.js";
 
 export interface InvestigateOptions {
   persist?: boolean;
   logPath?: string;
   /** Force DEX search even for known large-cap symbols. */
   forceDex?: boolean;
+  /** Skip Pro layers even in key mode (tests). */
+  skipPro?: boolean;
 }
 
 export interface DossierBundle {
@@ -20,10 +23,20 @@ export interface DossierBundle {
       nearest_peers?: Array<{ symbol: string; rank: number | null; market_cap_usd?: number }>;
     };
     dex_hits?: number;
+    fear_greed?: { value: number; classification: string };
+    btc_dominance?: number | null;
+    eth_dominance?: number | null;
+    ath_drawdown_pct?: number | null;
+    ohlcv_range_pct?: number | null;
+    ohlcv_days?: number | null;
+    ticker_collision?: boolean;
+    collision_note?: string;
   };
+  pro?: ProContext;
   quotesPath: string;
   listingsPath: string;
   dexPath: string;
+  collisionCandidates?: number;
 }
 
 /** Heuristic: 0x… contract, unknown ticker length, or RUG-like fixture scam. */
@@ -31,6 +44,7 @@ export function shouldProbeDex(symbol: string, asset?: CryptoAsset): boolean {
   const s = symbol.trim();
   if (/^0x[a-fA-F0-9]{8,}$/.test(s)) return true;
   if (s.toUpperCase() === "RUG") return true;
+  if (s.toUpperCase() === "FAKEBTC") return true;
   if (asset?.cmc_rank != null && asset.cmc_rank > 500) return true;
   if (asset?.quote?.USD?.market_cap != null && asset.quote.USD.market_cap < 5_000_000) return true;
   // Unknown short meme-style symbols (not BTC/ETH majors) — still optional
@@ -58,23 +72,38 @@ function pathsForMode(mode: AuthMode): {
   };
 }
 
-function pickAsset(data: Record<string, CryptoAsset>, symbol: string): CryptoAsset {
+function pickAsset(
+  data: Record<string, CryptoAsset>,
+  symbol: string,
+): { asset: CryptoAsset; candidates: number } {
   const upper = symbol.toUpperCase();
-  if (data[upper]) return data[upper]!;
-  if (data[symbol]) return data[symbol]!;
-  const first = Object.keys(data)[0];
-  if (!first) throw new Error(`No quote data returned for symbol "${symbol}"`);
-  return data[first]!;
+  // FAKEBTC fixture is keyed as FAKEBTC but asset.symbol may be BTC
+  if (data[upper]) return { asset: data[upper]!, candidates: 1 };
+  if (data[symbol]) return { asset: data[symbol]!, candidates: 1 };
+  const keys = Object.keys(data);
+  if (!keys.length) throw new Error(`No quote data returned for symbol "${symbol}"`);
+  // Multiple keys → treat as collision candidates when same ticker appears
+  const bySym = keys.filter((k) => data[k]!.symbol?.toUpperCase() === upper);
+  if (bySym.length > 1) {
+    // Prefer highest rank (lowest number) as selected; collision flagged later
+    const sorted = [...bySym].sort((a, b) => {
+      const ra = data[a]!.cmc_rank ?? Number.POSITIVE_INFINITY;
+      const rb = data[b]!.cmc_rank ?? Number.POSITIVE_INFINITY;
+      return ra - rb;
+    });
+    return { asset: data[sorted[0]!]!, candidates: bySym.length };
+  }
+  return { asset: data[keys[0]!]!, candidates: Math.max(1, bySym.length || 1) };
 }
 
 /**
- * Multi-endpoint Market Dossier: quotes + listings (+ dex when warranted).
+ * Multi-endpoint Market Dossier: quotes + listings (+ dex when warranted) + Pro context.
  * Every call is recorded on evidence[] — never invents metrics.
  */
 export async function gatherDossier(
   client: CmcClient,
   symbol: string,
-  opts: { forceDex?: boolean } = {},
+  opts: { forceDex?: boolean; skipPro?: boolean } = {},
 ): Promise<DossierBundle> {
   const paths = pathsForMode(client.mode);
   const evidence: EvidenceEntry[] = [];
@@ -82,7 +111,7 @@ export async function gatherDossier(
 
   // 1) quotes/latest — primary market truth
   const quotes = await client.getQuotesLatest(symbol);
-  const asset = pickAsset(quotes.data, symbol);
+  const { asset, candidates } = pickAsset(quotes.data, symbol);
   evidence.push({
     endpoint: paths.quotes,
     credit_count: quotes.status?.credit_count,
@@ -96,6 +125,7 @@ export async function gatherDossier(
       price_usd: asset.quote.USD.price,
       market_cap_usd: asset.quote.USD.market_cap,
       volume_24h_usd: asset.quote.USD.volume_24h,
+      quote_candidates: candidates,
     },
   });
 
@@ -113,11 +143,17 @@ export async function gatherDossier(
 
   // Enrich rank from listings if quote omitted it
   const listingMatch = listingRows.find(
-    (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase(),
-  );
+    (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase() && a.id === asset.id,
+  ) ?? listingRows.find((a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase());
   if (listingMatch?.cmc_rank != null && asset.cmc_rank == null) {
     asset.cmc_rank = listingMatch.cmc_rank;
   }
+
+  // Same-ticker peers in listings (collision signal)
+  const sameTicker = listingRows.filter(
+    (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase(),
+  );
+  const collisionCandidates = Math.max(candidates, sameTicker.length || 1);
 
   observedExtras.peer_rank_context = {
     listings_count: listingRows.length,
@@ -128,12 +164,13 @@ export async function gatherDossier(
     endpoint: paths.listings,
     credit_count: listings.status?.credit_count,
     status_timestamp: listings.status?.timestamp,
-    used_for: "CMC rank context and peer market-cap comparison",
+    used_for: "CMC rank context, peer market-cap comparison, ticker collision scan",
     summary: {
       listings_count: listingRows.length,
       top_symbol: listingRows[0]?.symbol,
       matched_rank: listingMatch?.cmc_rank ?? asset.cmc_rank ?? null,
       peer_symbols: peers.map((p) => p.symbol),
+      same_ticker_count: sameTicker.length,
     },
   });
 
@@ -162,10 +199,30 @@ export async function gatherDossier(
           : null,
       },
     });
+  }
 
-    // Soft signal: zero DEX liquidity hits for a purported small token
-    if (tokens.length === 0 && (asset.cmc_rank ?? 9999) > 500) {
-      // reasons added in gate via observedExtras.dex_hits === 0
+  // 4) Pro-smart context (key live / fixture mock / skip cleanly)
+  let pro: ProContext | undefined;
+  if (!opts.skipPro) {
+    const bundle = await gatherProContext(client.mode, symbol, asset, {
+      collisionCandidates,
+    });
+    pro = bundle.pro;
+    evidence.push(...bundle.evidence);
+
+    if (pro.fear_greed) observedExtras.fear_greed = pro.fear_greed;
+    if (pro.btc_dominance != null) observedExtras.btc_dominance = pro.btc_dominance;
+    if (pro.eth_dominance != null) observedExtras.eth_dominance = pro.eth_dominance;
+    if (pro.price_performance?.ath_drawdown_pct != null) {
+      observedExtras.ath_drawdown_pct = pro.price_performance.ath_drawdown_pct;
+    }
+    if (pro.ohlcv_volatility) {
+      observedExtras.ohlcv_range_pct = pro.ohlcv_volatility.range_pct;
+      observedExtras.ohlcv_days = pro.ohlcv_volatility.days;
+    }
+    if (pro.collision) {
+      observedExtras.ticker_collision = pro.collision.is_non_canonical;
+      observedExtras.collision_note = pro.collision.note;
     }
   }
 
@@ -173,14 +230,16 @@ export async function gatherDossier(
     asset,
     evidence,
     observedExtras,
+    pro,
     quotesPath: paths.quotes,
     listingsPath: paths.listings,
     dexPath: paths.dex,
+    collisionCandidates,
   };
 }
 
 /**
- * investigate(symbol) — one-run multi-endpoint dossier + gate + chained receipt.
+ * investigate(symbol) — one-run multi-endpoint dossier + Pro + gate + chained receipt.
  */
 export async function investigate(
   client: CmcClient,
@@ -188,10 +247,13 @@ export async function investigate(
   opts: InvestigateOptions = {},
 ): Promise<GateResult> {
   const logPath = opts.logPath ?? defaultReceiptLogPath();
-  const dossier = await gatherDossier(client, symbol, { forceDex: opts.forceDex });
+  const dossier = await gatherDossier(client, symbol, {
+    forceDex: opts.forceDex,
+    skipPro: opts.skipPro,
+  });
 
-  // Extra reason if dex probed with zero hits on a shady rank
-  const tip = opts.persist === false ? { prev_hash: null, chain_height: 0 } : await readChainTip(logPath);
+  const tip =
+    opts.persist === false ? { prev_hash: null, chain_height: 0 } : await readChainTip(logPath);
 
   const result = evaluateAsset({
     asset: dossier.asset,
@@ -200,6 +262,7 @@ export async function investigate(
     evidence: dossier.evidence,
     observedExtras: dossier.observedExtras,
     chain: tip,
+    pro: dossier.pro,
   });
 
   // Annotate reasons with dossier coverage
@@ -209,6 +272,9 @@ export async function investigate(
     result.reasons.push("DEX search returned 0 hits — weak on-chain discoverability");
   } else if (typeof dossier.observedExtras.dex_hits === "number") {
     result.reasons.push(`DEX search hits: ${dossier.observedExtras.dex_hits}`);
+  }
+  if (dossier.pro?.source && dossier.pro.source !== "skipped") {
+    result.reasons.push(`Pro context source: ${dossier.pro.source}`);
   }
 
   if (opts.persist !== false) {

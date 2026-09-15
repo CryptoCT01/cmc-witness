@@ -1,0 +1,34 @@
+{
+  "pro": {
+    "source": "fixture-mock",
+    "fear_greed": { "value": 70, "classification": "Greed", "update_time": null },
+    "btc_dominance": 54.2,
+    "price_performance": {
+      "all_time_high": 1.2,
+      "all_time_low": 0.01,
+      "close": 0.42,
+      "ath_drawdown_pct": 65.0
+    },
+    "ohlcv_volatility": {
+      "days": 14,
+      "high": 0.9,
+      "low": 0.2,
+      "range_pct": 127.27,
+      "closes": [0.3, 0.5, 0.8, 0.4, 0.2, 0.6, 0.42]
+    }
+  },
+  "evidence": [
+    {
+      "endpoint": "/v3/fear-and-greed/latest",
+      "used_for": "Fear & Greed regime caution when extreme",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "value": 70, "classification": "Greed" }
+    },
+    {
+      "endpoint": "/v1/global-metrics/quotes/latest",
+      "used_for": "BTC/ETH dominance regime context",
+      "status_timestamp": "2026-09-15T07:00:00.000Z",
+      "summary": { "btc_dominance": 54.2 }
+    }
+  ]
+}
