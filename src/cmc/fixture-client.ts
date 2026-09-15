@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   CmcClient,
+  CryptoAsset,
   DexPairQuoteResponse,
   DexSearchResponse,
   ListingsLatestResponse,
@@ -16,8 +17,22 @@ async function loadJson<T>(name: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+function quoteFromListing(asset: CryptoAsset): QuotesLatestResponse {
+  return {
+    status: {
+      timestamp: "2026-09-15T07:00:00.000Z",
+      error_code: 0,
+      error_message: null,
+      elapsed: 5,
+      credit_count: 1,
+    },
+    data: { [asset.symbol.toUpperCase()]: asset },
+  };
+}
+
 /**
  * Offline client for demos/tests. Serves known fixtures only — never fabricates metrics.
+ * Listing-tail symbols (DUST, TAIL, …) reuse the listings fixture rows as quotes.
  */
 export class FixtureCmcClient implements CmcClient {
   readonly mode = "fixture" as const;
@@ -27,8 +42,30 @@ export class FixtureCmcClient implements CmcClient {
     if (sym === "BTC") return loadJson("btc-quote.json");
     if (sym === "ETH") return loadJson("eth-quote.json");
     if (sym === "RUG") return loadJson("scammy-quote.json");
+
+    // Contract-looking addresses → treat as unknown/scammy for offline demos
+    if (/^0X[A-F0-9]{8,}$/.test(sym)) {
+      const rug = await loadJson<QuotesLatestResponse>("scammy-quote.json");
+      const asset = rug.data.RUG!;
+      return {
+        ...rug,
+        data: {
+          [sym]: {
+            ...asset,
+            symbol: sym.slice(0, 8),
+            name: "Unknown Contract Token",
+            slug: "unknown-contract",
+          },
+        },
+      };
+    }
+
+    const listings = await loadJson<ListingsLatestResponse>("listings-latest.json");
+    const hit = listings.data.find((a) => a.symbol.toUpperCase() === sym);
+    if (hit) return quoteFromListing(hit);
+
     throw new Error(
-      `Fixture mode has no quote for "${sym}". Available: BTC, ETH, RUG. ` +
+      `Fixture mode has no quote for "${sym}". Available: BTC, ETH, RUG, + listings symbols. ` +
         `Set CMC_WITNESS_MODE=x402|key or provide live credentials.`,
     );
   }
@@ -37,7 +74,31 @@ export class FixtureCmcClient implements CmcClient {
     return loadJson("listings-latest.json");
   }
 
-  async dexSearch(_keyword: string): Promise<DexSearchResponse> {
+  async dexSearch(keyword: string): Promise<DexSearchResponse> {
+    const kw = keyword.trim().toLowerCase();
+    // RUG / dust / contracts get empty-ish or scam-oriented dex fixture flavor
+    if (kw === "rug" || kw.startsWith("0x") || kw === "dust" || kw === "tail") {
+      const base = await loadJson<DexSearchResponse>("dex-search.json");
+      return {
+        ...base,
+        data: {
+          tokens:
+            kw === "rug" || kw.startsWith("0x")
+              ? []
+              : [
+                  {
+                    name: "Dust Pair",
+                    symbol: "DUST",
+                    address: "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                    network: "bsc",
+                    price_usd: 0.00042,
+                    liquidity_usd: 1200,
+                    volume_24h_usd: 800,
+                  },
+                ],
+        },
+      };
+    }
     return loadJson("dex-search.json");
   }
 

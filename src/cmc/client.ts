@@ -23,10 +23,15 @@ function normalizePk(pk: string | undefined): `0x${string}` | undefined {
   return (trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`) as `0x${string}`;
 }
 
+function resolvePrivateKey(): `0x${string}` | undefined {
+  // X402_PRIVATE_KEY alias supported for hackathon docs / judge familiarity
+  return normalizePk(process.env.EVM_PRIVATE_KEY ?? process.env.X402_PRIVATE_KEY);
+}
+
 /**
  * Resolve CMC client:
  * 1. fixture — offline
- * 2. x402 — EVM_PRIVATE_KEY present
+ * 2. x402 — EVM_PRIVATE_KEY / X402_PRIVATE_KEY present
  * 3. key — CMC_API_KEY present
  * auto prefers x402 then key then fixture.
  */
@@ -35,11 +40,15 @@ export function createCmcClient(override?: WitnessMode): CmcClient {
 
   if (mode === "fixture") return new FixtureCmcClient();
 
-  const pk = normalizePk(process.env.EVM_PRIVATE_KEY);
+  const pk = resolvePrivateKey();
   const apiKey = process.env.CMC_API_KEY?.trim();
 
   if (mode === "x402") {
-    if (!pk) throw new Error("CMC_WITNESS_MODE=x402 requires EVM_PRIVATE_KEY");
+    if (!pk) {
+      throw new Error(
+        "CMC_WITNESS_MODE=x402 requires EVM_PRIVATE_KEY (or X402_PRIVATE_KEY)",
+      );
+    }
     return new X402CmcClient({ privateKey: pk });
   }
 

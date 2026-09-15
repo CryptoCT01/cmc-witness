@@ -13,6 +13,7 @@
       "symbol": "BTC",
       "slug": "bitcoin",
       "cmc_rank": 1,
+      "num_market_pairs": 1180,
       "quote": {
         "USD": {
           "price": 95432.12,
@@ -28,12 +29,90 @@
       "symbol": "ETH",
       "slug": "ethereum",
       "cmc_rank": 2,
+      "num_market_pairs": 980,
       "quote": {
         "USD": {
           "price": 3421.55,
           "volume_24h": 14200000000,
           "percent_change_24h": 2.6,
           "market_cap": 411900000000
+        }
+      }
+    },
+    {
+      "id": 825,
+      "name": "Tether USDt",
+      "symbol": "USDT",
+      "slug": "tether",
+      "cmc_rank": 3,
+      "quote": {
+        "USD": {
+          "price": 1.0,
+          "volume_24h": 52000000000,
+          "percent_change_24h": 0.01,
+          "market_cap": 118000000000
+        }
+      }
+    },
+    {
+      "id": 1839,
+      "name": "BNB",
+      "symbol": "BNB",
+      "slug": "bnb",
+      "cmc_rank": 4,
+      "quote": {
+        "USD": {
+          "price": 580.2,
+          "volume_24h": 1800000000,
+          "percent_change_24h": 0.9,
+          "market_cap": 85000000000
+        }
+      }
+    },
+    {
+      "id": 5426,
+      "name": "Solana",
+      "symbol": "SOL",
+      "slug": "solana",
+      "cmc_rank": 5,
+      "quote": {
+        "USD": {
+          "price": 148.3,
+          "volume_24h": 3200000000,
+          "percent_change_24h": 3.1,
+          "market_cap": 72000000000
+        }
+      }
+    },
+    {
+      "id": 888001,
+      "name": "MicroCap Demo",
+      "symbol": "DUST",
+      "slug": "microcap-demo",
+      "cmc_rank": 3200,
+      "num_market_pairs": 3,
+      "quote": {
+        "USD": {
+          "price": 0.00042,
+          "volume_24h": 18000,
+          "percent_change_24h": 22.5,
+          "market_cap": 420000
+        }
+      }
+    },
+    {
+      "id": 888002,
+      "name": "Tail Illiquid",
+      "symbol": "TAIL",
+      "slug": "tail-illiquid",
+      "cmc_rank": 4100,
+      "num_market_pairs": 2,
+      "quote": {
+        "USD": {
+          "price": 0.000008,
+          "volume_24h": 4200,
+          "percent_change_24h": -35.0,
+          "market_cap": 28000
         }
       }
     }

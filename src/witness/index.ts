@@ -1,4 +1,5 @@
 export { beforeYouTrade, evaluateAsset } from "./gate.js";
+export { investigate, gatherDossier, shouldProbeDex } from "./dossier.js";
 export {
   createMarketReceipt,
   appendReceiptLog,
@@ -6,5 +7,18 @@ export {
   rememberReceipt,
   buildObserved,
   hashObserved,
+  hashReceiptLink,
+  readChainTip,
+  verifyReceiptChain,
+  defaultReceiptLogPath,
 } from "./receipt.js";
-export type { Decision, GateResult, MarketReceipt, GateInput } from "./types.js";
+export type {
+  Decision,
+  GateResult,
+  MarketReceipt,
+  GateInput,
+  EvidenceEntry,
+  ReceiptSchema,
+} from "./types.js";
+export type { ChainVerifyResult, ChainTip } from "./receipt.js";
+export type { InvestigateOptions, DossierBundle } from "./dossier.js";

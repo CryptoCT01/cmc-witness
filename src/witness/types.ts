@@ -2,9 +2,27 @@ import type { AuthMode, CryptoAsset, UsdQuote } from "../cmc/types.js";
 
 export type Decision = "allow" | "caution" | "block";
 
+/** One CMC endpoint invocation recorded on the receipt — never invented metrics. */
+export interface EvidenceEntry {
+  /** API path, e.g. /v1/cryptocurrency/quotes/latest */
+  endpoint: string;
+  /** Credits charged by CMC for this call (when present). */
+  credit_count?: number;
+  /** status.timestamp from the CMC response. */
+  status_timestamp?: string;
+  /** How this call informed the gate decision. */
+  used_for: string;
+  /** Compact observed summary (only fields seen on the wire). */
+  summary?: Record<string, unknown>;
+}
+
+export type ReceiptSchema =
+  | "cmc-witness.market-receipt/v1"
+  | "cmc-witness.market-receipt/v2";
+
 export interface MarketReceipt {
   id: string;
-  schema: "cmc-witness.market-receipt/v1";
+  schema: ReceiptSchema;
   created_at: string;
   symbol: string;
   auth_mode: AuthMode;
@@ -26,9 +44,27 @@ export interface MarketReceipt {
     max_supply?: number | null;
     last_updated?: string;
     source_status_timestamp?: string;
+    /** Peer context from listings when dossier ran. */
+    peer_rank_context?: {
+      listings_count: number;
+      nearest_peers?: Array<{ symbol: string; rank: number | null; market_cap_usd?: number }>;
+    };
+    /** DEX hit count when dex/search was invoked. */
+    dex_hits?: number;
   };
+  /** Per-endpoint evidence trail (v2 dossier). */
+  evidence: EvidenceEntry[];
   /** Opaque hash of observed payload for integrity checks. */
   observed_hash: string;
+  /**
+   * Links to previous receipt's `receipt_hash` (or observed_hash for legacy).
+   * null for genesis (chain_height 0).
+   */
+  prev_hash: string | null;
+  /** Monotonic height in the local JSONL receipt chain. */
+  chain_height: number;
+  /** Hash of chain-critical receipt fields (id, observed_hash, prev_hash, chain_height, symbol). */
+  receipt_hash: string;
 }
 
 export interface GateResult {
@@ -43,6 +79,9 @@ export interface GateInput {
   asset: CryptoAsset;
   authMode: AuthMode;
   statusTimestamp?: string;
+  evidence?: EvidenceEntry[];
+  observedExtras?: Partial<MarketReceipt["observed"]>;
+  chain?: { prev_hash: string | null; chain_height: number };
 }
 
 export function extractUsd(asset: CryptoAsset): UsdQuote {

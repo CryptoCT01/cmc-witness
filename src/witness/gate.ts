@@ -1,12 +1,24 @@
 import type { CmcClient } from "../cmc/types.js";
-import { createMarketReceipt, appendReceiptLog, rememberReceipt } from "./receipt.js";
-import type { Decision, GateResult } from "./types.js";
+import {
+  createMarketReceipt,
+  appendReceiptLog,
+  rememberReceipt,
+  readChainTip,
+  defaultReceiptLogPath,
+} from "./receipt.js";
+import type { Decision, EvidenceEntry, GateResult, MarketReceipt } from "./types.js";
 import { extractUsd } from "./types.js";
 
 export interface BeforeYouTradeOptions {
   /** Persist JSONL receipt (default true). */
   persist?: boolean;
   logPath?: string;
+  /**
+   * Multi-endpoint Market Dossier (quotes + listings + conditional dex).
+   * Default true — Court of Markets enhancement.
+   */
+  dossier?: boolean;
+  forceDex?: boolean;
 }
 
 /**
@@ -17,6 +29,9 @@ export function evaluateAsset(input: {
   asset: import("../cmc/types.js").CryptoAsset;
   authMode: import("../cmc/types.js").AuthMode;
   statusTimestamp?: string;
+  evidence?: EvidenceEntry[];
+  observedExtras?: Partial<MarketReceipt["observed"]>;
+  chain?: { prev_hash: string | null; chain_height: number };
 }): GateResult {
   const { asset, authMode, statusTimestamp } = input;
   const usd = extractUsd(asset);
@@ -104,6 +119,12 @@ export function evaluateAsset(input: {
     reasons.push(`Low CMC rank (#${asset.cmc_rank})`);
   }
 
+  // DEX dossier signal (only when observed)
+  if (input.observedExtras?.dex_hits === 0) {
+    score -= 5;
+    reasons.push("No DEX search hits observed for this symbol");
+  }
+
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   let decision: Decision;
@@ -119,31 +140,79 @@ export function evaluateAsset(input: {
     reasons.unshift(`Gate decision: ALLOW (score ${score}/100)`);
   }
 
-  const receipt = createMarketReceipt(asset, authMode, statusTimestamp);
+  const receipt = createMarketReceipt(asset, authMode, statusTimestamp, {
+    evidence: input.evidence ?? [
+      {
+        endpoint: "(single-quote)",
+        status_timestamp: statusTimestamp,
+        used_for: "legacy single-endpoint quote path",
+        summary: { symbol: asset.symbol },
+      },
+    ],
+    observedExtras: input.observedExtras,
+    prev_hash: input.chain?.prev_hash ?? null,
+    chain_height: input.chain?.chain_height ?? 0,
+  });
   rememberReceipt(receipt);
 
   return { decision, score, reasons, receipt };
 }
 
+/**
+ * Core agent tool. By default runs the multi-endpoint Market Dossier
+ * (quotes + listings + conditional dex) and appends a chained v2 receipt.
+ */
 export async function beforeYouTrade(
   client: CmcClient,
   symbol: string,
   opts: BeforeYouTradeOptions = {},
 ): Promise<GateResult> {
+  const useDossier = opts.dossier !== false;
+  if (useDossier) {
+    const { investigate } = await import("./dossier.js");
+    return investigate(client, symbol, {
+      persist: opts.persist,
+      logPath: opts.logPath,
+      forceDex: opts.forceDex,
+    });
+  }
+
+  // Legacy single-endpoint path (still available for tests / debugging)
   const quotes = await client.getQuotesLatest(symbol);
   const key = Object.keys(quotes.data)[0];
   if (!key) {
     throw new Error(`No quote data returned for symbol "${symbol}"`);
   }
-  const asset = quotes.data[key];
+  const asset = quotes.data[key]!;
+  const logPath = opts.logPath ?? defaultReceiptLogPath();
+  const tip =
+    opts.persist === false ? { prev_hash: null as string | null, chain_height: 0 } : await readChainTip(logPath);
+
   const result = evaluateAsset({
     asset,
     authMode: client.mode,
     statusTimestamp: quotes.status?.timestamp,
+    evidence: [
+      {
+        endpoint:
+          client.mode === "x402"
+            ? "/x402/v3/cryptocurrency/quotes/latest"
+            : "/v1/cryptocurrency/quotes/latest",
+        credit_count: quotes.status?.credit_count,
+        status_timestamp: quotes.status?.timestamp,
+        used_for: "primary quote (dossier disabled)",
+        summary: {
+          symbol: asset.symbol,
+          price_usd: asset.quote.USD.price,
+          market_cap_usd: asset.quote.USD.market_cap,
+        },
+      },
+    ],
+    chain: tip,
   });
 
   if (opts.persist !== false) {
-    await appendReceiptLog(result.receipt, opts.logPath);
+    await appendReceiptLog(result.receipt, logPath);
   }
 
   return result;
