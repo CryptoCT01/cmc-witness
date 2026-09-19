@@ -7,7 +7,7 @@
   <meta name="description" content="CMC Witness — Pro market floor + pre-trade referee. ALLOW / CAUTION / BLOCK from CoinMarketCap data with tamper-evident Market Receipts." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Orbitron:wght@700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -15,6 +15,7 @@
   <div class="hud tr" aria-hidden="true"></div>
   <div class="hud bl" aria-hidden="true"></div>
   <div class="hud br" aria-hidden="true"></div>
+  <div class="floor-x" aria-hidden="true"><div class="b b1"></div><div class="b b2"></div></div>
 
   <div id="splash">
     <div class="xbeams" aria-hidden="true"><div class="b b1"></div><div class="b b2"></div></div>
@@ -44,6 +45,57 @@
   </div>
 
   <div id="floor">
+    <div class="hunt-rail" aria-label="Witness status rail">
+      <div class="hunt-track">
+        <span class="hu">CMC WITNESS</span>
+        <span class="hd">·</span>
+        <span class="hc">ALLOW ≠ LONG</span>
+        <span class="hd">·</span>
+        <span class="hu">CAUTION</span>
+        <span class="hd">·</span>
+        <span class="hc">BLOCK</span>
+        <span class="hd">·</span>
+        <span class="hu">MCP · before_you_trade</span>
+        <span class="hd">·</span>
+        <span class="hc">x402 USDC</span>
+        <span class="hd">·</span>
+        <span class="hu">MARKET RECEIPTS</span>
+        <span class="hd">·</span>
+        <span class="hc">PRO SERIES</span>
+        <span class="hd">·</span>
+        <span class="hu">PRE-TRADE GATE</span>
+        <span class="hd">·</span>
+        <span class="hc">JUDGMENT NOT PRICE</span>
+        <span class="hd">·</span>
+        <span class="hu">#BUILDWITHCMC</span>
+        <span class="hd">·</span>
+        <span class="hc">FIXTURE-SAFE</span>
+        <span class="hd">·</span>
+        <span class="hu">CMC WITNESS</span>
+        <span class="hd">·</span>
+        <span class="hc">ALLOW ≠ LONG</span>
+        <span class="hd">·</span>
+        <span class="hu">CAUTION</span>
+        <span class="hd">·</span>
+        <span class="hc">BLOCK</span>
+        <span class="hd">·</span>
+        <span class="hu">MCP · before_you_trade</span>
+        <span class="hd">·</span>
+        <span class="hc">x402 USDC</span>
+        <span class="hd">·</span>
+        <span class="hu">MARKET RECEIPTS</span>
+        <span class="hd">·</span>
+        <span class="hc">PRO SERIES</span>
+        <span class="hd">·</span>
+        <span class="hu">PRE-TRADE GATE</span>
+        <span class="hd">·</span>
+        <span class="hc">JUDGMENT NOT PRICE</span>
+        <span class="hd">·</span>
+        <span class="hu">#BUILDWITHCMC</span>
+        <span class="hd">·</span>
+        <span class="hc">FIXTURE-SAFE</span>
+      </div>
+    </div>
     <div class="mock-banner" id="floorBanner">
       <span class="dot"></span>
       <span id="bannerText">Loading CMC Pro market floor…</span>
@@ -217,6 +269,24 @@
     </section>
 
     <section class="main-grid" aria-label="Market floor panels">
+      <article class="panel mkt top-panel chrome book-us">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot g"></span>
+            <div>
+              <div class="ph-t">Top mcap</div>
+              <div class="ph-s">12 · logos</div>
+            </div>
+          </div>
+          <button class="help-btn" type="button" data-modal="help-top" aria-label="Top mcap help">?</button>
+        </div>
+        <div class="panel-body tight">
+          <table class="mkt-table logo-table">
+            <thead><tr><th>#</th><th>Asset</th><th>Price</th><th>24h</th><th>Mcap</th></tr></thead>
+            <tbody id="topMcapBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </article>
       <article class="panel us gate-panel focal">
         <div class="ph">
           <div class="ph-l">
@@ -302,27 +372,7 @@
           </div>
         </div>
       </article>
-
-      <article class="panel mkt top-panel chrome">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot g"></span>
-            <div>
-              <div class="ph-t">Top mcap</div>
-              <div class="ph-s">12 · logos</div>
-            </div>
-          </div>
-          <button class="help-btn" type="button" data-modal="help-top" aria-label="Top mcap help">?</button>
-        </div>
-        <div class="panel-body tight">
-          <table class="mkt-table logo-table">
-            <thead><tr><th>#</th><th>Asset</th><th>Price</th><th>24h</th><th>Mcap</th></tr></thead>
-            <tbody id="topMcapBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="panel mkt gainers-panel chrome">
+      <article class="panel mkt gainers-panel chrome book-us">
         <div class="ph">
           <div class="ph-l">
             <span class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>
@@ -340,8 +390,7 @@
           </table>
         </div>
       </article>
-
-      <article class="panel mkt losers-panel chrome">
+      <article class="panel mkt losers-panel chrome book-cr">
         <div class="ph">
           <div class="ph-l">
             <span class="dot" style="background:var(--red);box-shadow:0 0 8px var(--red)"></span>
@@ -359,31 +408,7 @@
           </table>
         </div>
       </article>
-
-      <article class="panel mkt heat-panel chrome">
-        <div class="ph">
-          <div class="ph-l">
-            <span class="dot c"></span>
-            <div>
-              <div class="ph-t" style="color:var(--cyan)">Heat</div>
-              <div class="ph-s">Trending · visited</div>
-            </div>
-          </div>
-          <button class="help-btn" type="button" data-modal="help-heat" aria-label="Heat help">?</button>
-        </div>
-        <div class="panel-body tight dual-lists">
-          <div class="dual-col">
-            <div class="list-h">Trending</div>
-            <ul class="coin-list" id="trendingList"><li class="empty">Loading…</li></ul>
-          </div>
-          <div class="dual-col">
-            <div class="list-h">Most visited</div>
-            <ul class="coin-list" id="visitedList"><li class="empty">Loading…</li></ul>
-          </div>
-        </div>
-      </article>
-
-      <article class="panel mkt listings-panel chrome">
+      <article class="panel mkt listings-panel chrome book-us">
         <div class="ph">
           <div class="ph-l">
             <span class="dot g"></span>
@@ -401,7 +426,6 @@
           <ul class="coin-list cat-scroll" id="catList"><li class="empty">Loading…</li></ul>
         </div>
       </article>
-
       <article class="panel core dossier-panel order-panel focal">
         <div class="ph">
           <div class="ph-l">
@@ -456,6 +480,28 @@
           </div>
           <div class="ops-meta" id="reportMeta">Offline fixture ready</div>
           <div class="ops-meta" id="floorMeta">Floor · —</div>
+        </div>
+      </article>
+      <article class="panel mkt heat-panel chrome book-cr">
+        <div class="ph">
+          <div class="ph-l">
+            <span class="dot c"></span>
+            <div>
+              <div class="ph-t" style="color:var(--cyan)">Heat</div>
+              <div class="ph-s">Trending · visited</div>
+            </div>
+          </div>
+          <button class="help-btn" type="button" data-modal="help-heat" aria-label="Heat help">?</button>
+        </div>
+        <div class="panel-body tight dual-lists">
+          <div class="dual-col">
+            <div class="list-h">Trending</div>
+            <ul class="coin-list" id="trendingList"><li class="empty">Loading…</li></ul>
+          </div>
+          <div class="dual-col">
+            <div class="list-h">Most visited</div>
+            <ul class="coin-list" id="visitedList"><li class="empty">Loading…</li></ul>
+          </div>
         </div>
       </article>
     </section>
