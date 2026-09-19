@@ -49,9 +49,21 @@
       <span id="bannerText">Loading CMC Pro market floor…</span>
     </div>
 
-    <div class="story-chrome" id="storyChrome">
-      <span class="sc-pulse" aria-hidden="true"></span>
-      <span class="sc-text">Bots clear Witness before they size. <b>ALLOW ≠ long/short.</b> <b class="sc-block">BLOCK = don’t touch.</b></span>
+    <div class="value-strip" id="valueStrip" role="note" aria-label="What Witness sells">
+      <div class="vs-cell product">
+        <span class="vs-k">Sells</span>
+        <span class="vs-v"><b>Judgment · receipts · gate</b> <em>— not free BTC price</em></span>
+      </div>
+      <div class="vs-sep" aria-hidden="true"></div>
+      <div class="vs-cell allow">
+        <span class="vs-k">ALLOW</span>
+        <span class="vs-v"><b>≠ long / buy</b> <em>— okay to touch only</em></span>
+      </div>
+      <div class="vs-sep" aria-hidden="true"></div>
+      <div class="vs-cell vs-diff">
+        <span class="vs-k">vs signals</span>
+        <span class="vs-v">Not Alpha <b>LONG / HOLD / AVOID</b> <em>— clearance only</em></span>
+      </div>
     </div>
 
     <header class="top">
@@ -90,7 +102,7 @@
       <span class="sess-chip cyan" id="sessFloor">Floor · loading</span>
       <span class="sess-chip on">MCP · before_you_trade</span>
       <span class="sess-chip" id="kpiReceiptsChip">Receipts · <b id="kpiReceipts">0</b></span>
-      <span class="sess-chip shock">ALLOW ≠ long · Pro in score</span>
+      <span class="sess-chip shock">Gate ≠ Alpha LONG/HOLD/AVOID</span>
       <div class="toolbar-inline">
         <label class="act-mini">
           Load
@@ -250,6 +262,14 @@
             </div>
             <div class="vb-sym" id="caseSymbol">—</div>
             <div class="chip-row" id="reasonChips"></div>
+            <div class="why-theatre" id="whyTheatre" hidden>
+              <div class="why-head">
+                <span class="why-kicker">Why this decision</span>
+                <span class="why-tag" id="whyTag">—</span>
+              </div>
+              <p class="why-narrative" id="whyNarrative"></p>
+              <ol class="why-chain" id="whyChain"></ol>
+            </div>
           </div>
 
           <div class="contrast-block" id="contrastBlock" hidden>
@@ -274,16 +294,16 @@
           </div>
 
           <div class="reasons-wrap">
-            <div class="rw-h">Reasons <span class="rw-sub">CMC-observed only</span></div>
+            <div class="rw-h">Causal trail <span class="rw-sub">CMC-observed · ordered</span></div>
             <ul class="reasons" id="reasonsList"></ul>
           </div>
 
           <div class="ev-mini">
-            <div class="rw-h">Evidence</div>
+            <div class="rw-h">Evidence dossier <span class="rw-sub">endpoint → used for</span></div>
             <div class="ev-table-wrap mini">
               <table class="ev-table" id="evidenceTable">
-                <thead><tr><th>Endpoint</th><th>Cr</th><th>Why</th></tr></thead>
-                <tbody id="evidenceBody"><tr><td colspan="3" class="empty">No evidence yet.</td></tr></tbody>
+                <thead><tr><th>#</th><th>CMC endpoint</th><th>Cr</th><th>Informs</th></tr></thead>
+                <tbody id="evidenceBody"><tr><td colspan="4" class="empty">No evidence yet — run gate, duel, or a demo.</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -454,8 +474,9 @@
 
     <footer class="foot">
       <span class="fc hash">CMC Witness</span>
-      <span class="fc">ALLOW ≠ long/short</span>
-      <span class="fc ag">Pro in the score</span>
+      <span class="fc">Judgment · receipts · gate</span>
+      <span class="fc">ALLOW ≠ long</span>
+      <span class="fc ag">≠ LONG/HOLD/AVOID</span>
       <span class="fc">#BuildwithCMC</span>
     </footer>
   </div>

@@ -98,6 +98,10 @@ const els = {
   duelMount: document.getElementById("duelMount"),
   allowHelpBtn: document.getElementById("allowHelpBtn"),
   reasonChips: document.getElementById("reasonChips"),
+  whyTheatre: document.getElementById("whyTheatre"),
+  whyNarrative: document.getElementById("whyNarrative"),
+  whyChain: document.getElementById("whyChain"),
+  whyTag: document.getElementById("whyTag"),
   contrastBlock: document.getElementById("contrastBlock"),
   contrastAllowWord: document.getElementById("contrastAllowWord"),
   contrastAllowSub: document.getElementById("contrastAllowSub"),
@@ -152,9 +156,10 @@ const HELP = {
   },
   allow: {
     title: "What is ALLOW?",
-    body: `<p><b>Bots clear Witness before they size.</b> The three verdicts are clearance labels — not trade direction.</p>
-<p><b>ALLOW</b> — asset is liquid / identifiable enough to <i>touch</i>. <b>ALLOW ≠ long or buy.</b> Direction and size stay with the agent or human.</p>
-<p><b>CAUTION</b> — thin books, regime stress, incomplete identity, or mixed Pro chips. You may proceed, but size carefully and re-check evidence.</p>
+    body: `<p><b>Witness sells judgment, Market Receipts, and a pre-trade gate</b> — not a free BTC price board.</p>
+<p>The three verdicts are <b>clearance labels</b>, not trade direction. Unlike Alpha-style <b>LONG / HOLD / AVOID</b> signals, Witness never tells you which way to lean.</p>
+<p><b>ALLOW</b> — liquid / identifiable enough to <i>touch</i>. <b>ALLOW ≠ long or buy.</b> Direction and size stay with the agent or human.</p>
+<p><b>CAUTION</b> — thin books, regime stress, incomplete identity, or mixed Pro chips. Proceed carefully; re-check evidence.</p>
 <p><b>BLOCK</b> — rug-like path, ticker collision, or dangerous identity. <b>Do not touch.</b></p>
 <p>Pro chips (Fear&amp;Greed, BTC.D, ATH drawdown, OHLCV range) enter the score <b>only when CMC returned them</b>. Missing data is omitted — never fabricated.</p>`,
   },
@@ -526,6 +531,167 @@ function renderEnrichment(data) {
   else els.sparkSvg.innerHTML = "";
 }
 
+
+/** Severity from CMC-observed reason/chip text — never invents metrics. */
+function reasonSeverity(text) {
+  const s = String(text || "").toLowerCase();
+  if (/gate decision:\s*block|do not touch|collision|rug|spoof|scam|illiquid|extremely low|very low|0 dex|parabolic|crash/.test(s)) return "bad";
+  if (/gate decision:\s*caution|proceed carefully|thin|low |elevated|extreme|unlock|fear|greed|caution|spike|rank #|few market/.test(s)) return "warn";
+  if (/gate decision:\s*allow|okay to touch|healthy|adequate|broad venue|high cmc rank/.test(s)) return "ok";
+  if (/collision|block|rug|low mcap|low vol|spike|parabolic|0 dex/.test(s)) return "bad";
+  if (/greed|fear|caution|thin|ath|range|unlock|rank/.test(s)) return "warn";
+  if (/allow|pairs|healthy|f&g|btc\.d|ath|range/.test(s)) return "ok";
+  return "";
+}
+
+/** Short causal label for a reason line — tied to wording already in the reason. */
+function causalLabel(text) {
+  const s = String(text || "");
+  const low = s.toLowerCase();
+  if (/gate decision/.test(low)) return "Verdict";
+  if (/market cap|mcap/.test(low)) return "Mcap";
+  if (/volume|vol/.test(low)) return "Volume";
+  if (/pair/.test(low)) return "Venues";
+  if (/rank/.test(low)) return "Rank";
+  if (/fear|greed|f&g/.test(low)) return "Regime";
+  if (/dominance|btc\.d|eth\.d/.test(low)) return "Dominance";
+  if (/ath|drawdown|price-performance/.test(low)) return "Perf";
+  if (/ohlcv|range|close/.test(low)) return "OHLCV";
+  if (/dex/.test(low)) return "DEX";
+  if (/unlock/.test(low)) return "Supply";
+  if (/collision|ticker|spoof|junk/.test(low)) return "Identity";
+  if (/dossier|endpoint|pro context/.test(low)) return "Trail";
+  if (/1h|24h|7d|volatil|spike|parabolic|move/.test(low)) return "Move";
+  return "Signal";
+}
+
+/** Drop dossier/meta lines from the short why-chain; keep drivers. */
+function driverReasons(reasons) {
+  return (reasons ?? []).filter((r) => {
+    const s = String(r).toLowerCase();
+    return !/^dossier endpoints:/.test(s) && !/^pro context source:/.test(s);
+  });
+}
+
+function orderChips(chips, decision) {
+  const list = [...(chips ?? [])];
+  const weight = (c) => {
+    const sev = reasonSeverity(c) || chipClass(c) || "";
+    if (decision === "allow") {
+      if (sev === "ok") return 0;
+      if (sev === "warn") return 1;
+      return 2;
+    }
+    if (sev === "bad") return 0;
+    if (sev === "warn") return 1;
+    if (sev === "ok") return 2;
+    return 3;
+  };
+  return list.sort((a, b) => weight(a) - weight(b));
+}
+
+function buildWhyNarrative({ decision, score, symbol, reasons, reason_chips, evidence }) {
+  const d = String(decision || "").toLowerCase();
+  if (!d) return null;
+  const drivers = driverReasons(reasons);
+  const body = drivers.filter((r) => !/^gate decision:/i.test(String(r)));
+  const chips = orderChips(reason_chips, d);
+  const evN = (evidence ?? []).length;
+
+  const decWord =
+    d === "allow" ? "ALLOW" : d === "caution" ? "CAUTION" : d === "block" ? "BLOCK" : d.toUpperCase();
+  const meaning =
+    d === "allow"
+      ? "okay to touch — not a long/buy"
+      : d === "caution"
+        ? "proceed carefully — not a short signal"
+        : "do not touch";
+
+  const tops = [];
+  for (const c of chips.slice(0, 3)) tops.push(c);
+  if (!tops.length) {
+    for (const r of body.slice(0, 2)) {
+      const label = causalLabel(r);
+      const short = String(r).replace(/^Gate decision:\s*/i, "");
+      tops.push(short.length > 42 ? `${label}` : short);
+    }
+  }
+
+  const because =
+    tops.length > 0
+      ? `because ${tops.map((t) => String(t)).join(" · ")}`
+      : "from CMC-observed dossier fields only";
+
+  const trail =
+    evN > 0
+      ? ` Evidence: ${evN} CMC endpoint${evN === 1 ? "" : "s"} on the receipt.`
+      : "";
+
+  return {
+    decision: d,
+    tag: `${decWord} · ${score ?? "—"}/100`,
+    html: `<span class="wn-sym">${escapeHtml(symbol || "—")}</span> → <span class="wn-dec ${escapeHtml(d)}">${escapeHtml(decWord)}</span> (${escapeHtml(String(score ?? "—"))}/100): ${escapeHtml(meaning)} ${escapeHtml(because)}.${escapeHtml(trail)}`,
+    chain: drivers.slice(0, 5).map((r, i) => ({
+      n: String(i + 1).padStart(2, "0"),
+      cause: causalLabel(r),
+      text: String(r).replace(/^Gate decision:\s*/i, ""),
+      sev: reasonSeverity(r),
+    })),
+  };
+}
+
+function renderWhyTheatre(payload) {
+  if (!els.whyTheatre) return;
+  const why = buildWhyNarrative(payload || {});
+  if (!why) {
+    els.whyTheatre.hidden = true;
+    els.whyTheatre.dataset.decision = "";
+    if (els.whyNarrative) els.whyNarrative.innerHTML = "";
+    if (els.whyChain) els.whyChain.innerHTML = "";
+    if (els.whyTag) els.whyTag.textContent = "—";
+    return;
+  }
+  els.whyTheatre.hidden = false;
+  els.whyTheatre.dataset.decision = why.decision;
+  if (els.whyTag) els.whyTag.textContent = why.tag;
+  if (els.whyNarrative) els.whyNarrative.innerHTML = why.html;
+  if (els.whyChain) {
+    els.whyChain.innerHTML = why.chain
+      .map(
+        (c) => `<li class="sev-${escapeHtml(c.sev || "")}">
+        <span class="wc-n">${escapeHtml(c.n)}</span>
+        <span class="wc-t"><span class="wc-cause">${escapeHtml(c.cause)}</span>${escapeHtml(c.text)}</span>
+      </li>`,
+      )
+      .join("");
+  }
+}
+
+function openEvidenceDrawer(entry, idx, ctx) {
+  const ep = entry?.endpoint || "—";
+  const used = entry?.used_for || entry?.status_timestamp || "Observed on this gate run";
+  const cr = entry?.credit_count ?? "—";
+  const d = ctx?.decision || "";
+  openDrawer({
+    kicker: `Evidence · ${idx + 1}`,
+    title: String(ep).split("/").filter(Boolean).slice(-2).join("/") || ep,
+    mode: "evidence",
+    bodyHtml: `
+      <div class="drawer-why">
+        <div class="dw-k">Why this endpoint matters</div>
+        <div>${escapeHtml(used)}</div>
+      </div>
+      <div class="drawer-kv">
+        <div class="cg"><div class="cg-l">Endpoint</div><div class="cg-v" style="font-size:11px;word-break:break-all;color:var(--cyan)">${escapeHtml(ep)}</div></div>
+        <div class="cg"><div class="cg-l">Credits</div><div class="cg-v">${escapeHtml(cr)}</div></div>
+        <div class="cg"><div class="cg-l">Gate</div><div class="cg-v" style="font-size:12px">${escapeHtml(String(d || "—").toUpperCase())}</div></div>
+        <div class="cg"><div class="cg-l">Symbol</div><div class="cg-v" style="font-size:12px;color:var(--gold)">${escapeHtml(ctx?.symbol || "—")}</div></div>
+      </div>
+      <p class="drawer-note">Witness only cites CMC fields that returned. Missing series are omitted — never filled with RSI or invented metrics. This row is part of the tamper-evident Market Receipt trail.</p>
+    `,
+  });
+}
+
 function chipClass(label) {
   const s = String(label || "").toLowerCase();
   if (/collision|block|rug|low mcap|low vol|spike|parabolic|0 dex/.test(s)) return "bad";
@@ -534,16 +700,21 @@ function chipClass(label) {
   return "";
 }
 
-function renderReasonChips(chips) {
+function renderReasonChips(chips, decision) {
   if (!els.reasonChips) return;
-  const list = chips ?? [];
+  const list = orderChips(chips ?? [], decision);
   if (!list.length) {
     els.reasonChips.innerHTML = "";
     return;
   }
-  els.reasonChips.innerHTML = list
-    .map((c) => `<span class="rchip ${chipClass(c)}">${escapeHtml(c)}</span>`)
-    .join("");
+  els.reasonChips.innerHTML =
+    `<span class="chip-lab">Drivers</span>` +
+    list
+      .map((c, i) => {
+        const sev = reasonSeverity(c) || chipClass(c);
+        return `<span class="rchip ${sev}" title="${escapeHtml(c)}"><span class="ri">${i + 1}</span>${escapeHtml(c)}</span>`;
+      })
+      .join("");
 }
 
 function hideContrast() {
@@ -575,23 +746,37 @@ function applyVerdictView({ decision, score, symbol, sub, caseIdx, recklessLine,
     d === "allow" ? "var(--green)" : d === "caution" ? "var(--amber)" : d === "block" ? "var(--red)" : "var(--cyan)";
 
   const rs = reasons ?? [];
-  els.reasonsList.innerHTML = rs.map((r) => `<li>${escapeHtml(r)}</li>`).join("");
-  renderReasonChips(reason_chips);
+  els.reasonsList.innerHTML = rs
+    .map((r, i) => {
+      const sev = reasonSeverity(r);
+      const cause = causalLabel(r);
+      return `<li class="sev-${sev}"><span class="rn">${String(i + 1).padStart(2, "0")}</span><span><span class="rcause">${escapeHtml(cause)}</span>${escapeHtml(r)}</span></li>`;
+    })
+    .join("");
+  renderReasonChips(reason_chips, d);
+  renderWhyTheatre({ decision: d, score, symbol, reasons: rs, reason_chips, evidence });
   if (!keepContrast) hideContrast();
 
   const rows = evidence ?? [];
   if (!rows.length) {
-    els.evidenceBody.innerHTML = `<tr><td colspan="3" class="empty">No evidence yet.</td></tr>`;
+    els.evidenceBody.innerHTML = `<tr><td colspan="4" class="empty">No evidence yet — run gate, duel, or a demo.</td></tr>`;
   } else {
     els.evidenceBody.innerHTML = rows
       .map(
-        (e) => `<tr>
-        <td>${escapeHtml(e.endpoint)}</td>
+        (e, i) => `<tr class="ev-row" data-ev-idx="${i}" title="Open evidence detail">
+        <td class="ev-n">${i + 1}</td>
+        <td class="ev-ep">${escapeHtml(e.endpoint)}</td>
         <td>${escapeHtml(e.credit_count ?? "—")}</td>
-        <td style="font-family:var(--ui);color:var(--fg2)">${escapeHtml(e.used_for ?? e.status_timestamp ?? "—")}</td>
+        <td class="ev-why">${escapeHtml(e.used_for ?? e.status_timestamp ?? "—")}</td>
       </tr>`,
       )
       .join("");
+    els.evidenceBody.querySelectorAll("tr.ev-row").forEach((tr) => {
+      tr.addEventListener("click", () => {
+        const idx = Number(tr.getAttribute("data-ev-idx"));
+        openEvidenceDrawer(rows[idx], idx, { decision: d, symbol });
+      });
+    });
   }
   if (enrichment) renderEnrichment(enrichment);
   else hideEnrichment();
@@ -829,17 +1014,21 @@ function openCoinDrawer(el) {
   const price = el.getAttribute("data-price");
   const pct = el.getAttribute("data-pct");
   openDrawer({
-    kicker: "Asset · CMC Pro",
+    kicker: "Floor context · not clearance",
     title: sym,
     mode: "coin",
     bodyHtml: `
+      <div class="drawer-why">
+        <div class="dw-k">Investigative note</div>
+        <div>This row is <b>Pro floor context</b> (price / 24h) — not a Witness verdict. Alpha-style boards stop at LONG/HOLD/AVOID; Witness asks whether the asset is <b>safe to touch</b> before any size.</div>
+      </div>
       <div class="drawer-kv">
         <div class="cg"><div class="cg-l">Name</div><div class="cg-v" style="font-size:13px">${escapeHtml(name || "—")}</div></div>
         <div class="cg"><div class="cg-l">Price</div><div class="cg-v">${escapeHtml(fmtUsd(price === "" ? null : Number(price)))}</div></div>
         <div class="cg"><div class="cg-l">24h</div><div class="cg-v ${pctClass(pct === "" ? null : Number(pct))}">${escapeHtml(fmtPct(pct === "" ? null : Number(pct)))}</div></div>
-        <div class="cg"><div class="cg-l">Action</div><div class="cg-v" style="font-size:12px;color:var(--cyan)">Run gate</div></div>
+        <div class="cg"><div class="cg-l">Next</div><div class="cg-v" style="font-size:12px;color:var(--cyan)">Gate check</div></div>
       </div>
-      <p style="margin-top:4px">Click <b>Run gate</b> to clear this symbol through Witness before any sizing bot acts.</p>
+      <p class="drawer-note"><b>ALLOW ≠ long/buy.</b> Run the pre-trade gate so the agent gets ALLOW / CAUTION / BLOCK + a Market Receipt — judgment, not a free BTC ticker.</p>
       <button type="button" class="run-btn" id="drawerRunGate" style="width:100%;margin-top:8px">Run gate · ${escapeHtml(sym)}</button>
     `,
   });
@@ -879,20 +1068,50 @@ function openReceiptDrawer(i) {
   if (!round) return;
   const nodes = chainRowsFromReport(report);
   const node = nodes[i];
+  const why = buildWhyNarrative({
+    decision: round.decision,
+    score: round.score,
+    symbol: round.proposed,
+    reasons: round.reasons ?? [],
+    reason_chips: round.reason_chips ?? [],
+    evidence: evidenceForRound(round),
+  });
+  const reasonsHtml = (round.reasons ?? [])
+    .slice(0, 8)
+    .map((r) => `<li class="sev-${reasonSeverity(r)}">${escapeHtml(r)}</li>`)
+    .join("");
+  const ev = evidenceForRound(round);
+  const evHtml = ev.length
+    ? `<table class="drawer-ev"><thead><tr><th>Endpoint</th><th>Informs</th></tr></thead><tbody>${ev
+        .map(
+          (e) =>
+            `<tr><td class="ep">${escapeHtml(e.endpoint)}</td><td>${escapeHtml(e.used_for ?? e.status_timestamp ?? "—")}</td></tr>`,
+        )
+        .join("")}</tbody></table>`
+    : `<p class="drawer-note">No endpoint rows on this round.</p>`;
   openDrawer({
-    kicker: `Height ${node?.chain_height ?? i}`,
+    kicker: `Receipt · height ${node?.chain_height ?? i}`,
     title: String(round.proposed || "Receipt"),
     mode: "receipt",
     bodyHtml: `
+      <div class="drawer-why">
+        <div class="dw-k">Why this decision</div>
+        <div>${why ? why.html : escapeHtml(String(round.decision || "").toUpperCase())}</div>
+      </div>
       <div class="drawer-kv">
         <div class="cg"><div class="cg-l">Decision</div><div class="cg-v" style="color:var(--${round.decision === "allow" ? "green" : round.decision === "block" ? "red" : "amber"})">${escapeHtml(String(round.decision || "").toUpperCase())}</div></div>
         <div class="cg"><div class="cg-l">Score</div><div class="cg-v">${escapeHtml(round.score)}</div></div>
       </div>
-      <p>${escapeHtml(round.reckless_line || "")}</p>
-      <p style="font-family:var(--mono);font-size:10px;word-break:break-all">
+      <p class="drawer-note">${escapeHtml(round.reckless_line || "")}</p>
+      <div class="dw-k" style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3)">Causal trail</div>
+      <ul class="drawer-reasons">${reasonsHtml || "<li>No reasons on this receipt.</li>"}</ul>
+      <div class="dw-k" style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3);margin-top:4px">Evidence dossier</div>
+      ${evHtml}
+      <p style="font-family:var(--mono);font-size:10px;word-break:break-all;margin-top:8px">
         prev_hash <span style="color:var(--cyan)">${escapeHtml(node?.prev_hash ?? "genesis")}</span><br/>
         receipt_hash <span style="color:var(--gold)">${escapeHtml(node?.receipt_hash ?? "—")}</span>
       </p>
+      <p class="drawer-note"><b>ALLOW ≠ long.</b> This receipt is clearance + proof — not a directional Alpha signal.</p>
       <button type="button" class="act-mini gold" id="drawerShowDuel">Open duel theatre</button>
     `,
   });
@@ -1107,7 +1326,9 @@ document.querySelectorAll("[data-modal]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const key = btn.getAttribute("data-modal");
     const h = HELP[key];
-    if (h) openModal(h);
+    if (h && (h.body || h.bodyHtml)) openModal(h);
+    else if (h) openModal({ title: h.title || "Help", body: "<p>Help copy missing for this control.</p>" });
+    else openModal({ title: "Help", body: `<p>No help entry for <code>${escapeHtml(key || "?")}</code>.</p>` });
   });
 });
 els.allowHelpBtn?.addEventListener("click", () => openModal(HELP.allow));
