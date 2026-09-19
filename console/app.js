@@ -135,19 +135,124 @@ const state = {
 const HELP = {
   "help-gate": {
     title: "Live gate",
-    body: `<p>Type a ticker (<b>BTC</b>) or contract. The gate scores CMC evidence — including Pro Fear&amp;Greed, BTC.D, ATH drawdown, OHLCV range when available — and returns <b>ALLOW / CAUTION / BLOCK</b>.</p><p><b>ALLOW = okay to touch, NOT “go long.”</b> Demo buttons: Fake BTC collision · Rug / contract.</p>`,
+    body: `<p>The <b>live gate</b> is Witness’s pre-trade check. Type a ticker (<b>BTC</b>), junk symbol (<b>FAKEBTC</b>), or contract address.</p>
+<p>Witness scores <b>CMC-observed evidence only</b> — quotes, liquidity proxies, Pro Fear&amp;Greed, BTC.D / ETH.D, ATH drawdown, OHLCV range when the Pro floor returned them — then returns <b>ALLOW</b>, <b>CAUTION</b>, or <b>BLOCK</b>.</p>
+<p><b>ALLOW means “okay to touch,” not “go long.”</b> It never sizes the trade. Demo buttons: Fake BTC collision · Rug / contract.</p>
+<p>Use this panel to verify the referee before an agent ever proposes size.</p>`,
   },
   "help-dossier": {
     title: "Propose → Witness → Fill",
-    body: `<p>Simulated agent order ticket. Agent proposes BUY/SELL · Witness runs <code>before_you_trade</code> · result is <b>FILL allowed</b> or <b>REJECTED by Witness</b> with a receipt id.</p><p>Every evidence row is a real CMC endpoint call. Never invents RSI.</p>`,
+    body: `<p>This is the <b>order theatre</b>: a simulated agent ticket that must clear Witness before a fill.</p>
+<ol>
+<li><b>Propose</b> — agent sends BUY/SELL + symbol + size.</li>
+<li><b>Witness</b> — runs <code>before_you_trade</code> on CMC evidence.</li>
+<li><b>Fill</b> — <b>FILL allowed</b> or <b>REJECTED by Witness</b>, with a tamper-evident receipt id.</li>
+</ol>
+<p>Every evidence row maps to a real CMC endpoint call. Witness never invents RSI or fake metrics. Open <b>Receipt chain</b> / <b>Agent duel</b> below for the linked trail.</p>`,
   },
   allow: {
     title: "What is ALLOW?",
-    body: `<p><b>Bots clear Witness before they size.</b> ALLOW ≠ long/short. BLOCK = don’t touch.</p>
-<p><b>ALLOW</b> — okay to touch (liquid / identifiable enough). Not a buy signal.</p>
-<p><b>CAUTION</b> — thin books, regime stress, or incomplete identity — size carefully.</p>
-<p><b>BLOCK</b> — rug-like / collision / dangerous — do not touch.</p>
-<p>Pro chips (F&amp;G, BTC.D, ATH, OHLCV range) enter the score only when CMC returned them.</p>`,
+    body: `<p><b>Bots clear Witness before they size.</b> The three verdicts are clearance labels — not trade direction.</p>
+<p><b>ALLOW</b> — asset is liquid / identifiable enough to <i>touch</i>. <b>ALLOW ≠ long or buy.</b> Direction and size stay with the agent or human.</p>
+<p><b>CAUTION</b> — thin books, regime stress, incomplete identity, or mixed Pro chips. You may proceed, but size carefully and re-check evidence.</p>
+<p><b>BLOCK</b> — rug-like path, ticker collision, or dangerous identity. <b>Do not touch.</b></p>
+<p>Pro chips (Fear&amp;Greed, BTC.D, ATH drawdown, OHLCV range) enter the score <b>only when CMC returned them</b>. Missing data is omitted — never fabricated.</p>`,
+  },
+  "help-kpi-mcap": {
+    title: "Total market cap",
+    body: `<p><b>Mcap</b> is CMC’s aggregate crypto market capitalization from global metrics.</p>
+<p>Witness shows it so judges see the same Pro floor context the gate scores against — regime size, not a signal to buy the market.</p>
+<p><b>Source:</b> CMC global metrics / quotes (Pro floor).</p>`,
+  },
+  "help-kpi-vol": {
+    title: "24h volume",
+    body: `<p><b>Vol 24h</b> is total reported spot volume across the market in the last day.</p>
+<p>High volume supports liquidity assumptions in the gate; thin global volume is context for CAUTION paths — still not a long/short cue.</p>
+<p><b>Source:</b> CMC global metrics (Pro floor).</p>`,
+  },
+  "help-kpi-btcd": {
+    title: "BTC dominance",
+    body: `<p><b>BTC.D</b> is Bitcoin’s share of total crypto market cap.</p>
+<p>Witness surfaces it as a <b>regime chip</b>: rising dominance often means risk-off / BTC-led tape; falling dominance can mean alt rotation. It can enter the Pro score when CMC returns it — it is not a buy/sell instruction.</p>
+<p><b>Source:</b> CMC global metrics · BTC dominance.</p>`,
+  },
+  "help-kpi-ethd": {
+    title: "ETH dominance",
+    body: `<p><b>ETH.D</b> is Ethereum’s share of total crypto market cap.</p>
+<p>Shown beside BTC.D for relative major-asset context on the Pro floor. Useful for judges reading sector rotation; not a directional trade signal.</p>
+<p><b>Source:</b> CMC global metrics · ETH dominance.</p>`,
+  },
+  "help-kpi-allows": {
+    title: "Allows (duel tally)",
+    body: `<p><b>Allows</b> counts duel / fixture rounds that Witness cleared with <b>ALLOW</b>.</p>
+<p>This is a running scoreboard for the loaded report — proof the gate can pass liquid, identifiable assets. It is <b>not</b> “number of longs.”</p>`,
+  },
+  "help-kpi-caution": {
+    title: "Caution (duel tally)",
+    body: `<p><b>Caution</b> counts rounds where Witness returned <b>CAUTION</b> — proceed only with care.</p>
+<p>Typical drivers: thin liquidity, incomplete identity, or stressed Pro regime chips. Still not a short signal.</p>`,
+  },
+  "help-kpi-blocks": {
+    title: "Blocks (duel tally)",
+    body: `<p><b>Blocks</b> counts rounds Witness refused with <b>BLOCK</b>.</p>
+<p>These are the safety cases judges care about: ticker collisions, rug-like contracts, dangerous identity. <b>BLOCK = don’t touch.</b></p>`,
+  },
+  "help-kpi-last": {
+    title: "Last gate decision",
+    body: `<p><b>Last</b> shows the most recent live-gate or theatre verdict (ALLOW / CAUTION / BLOCK).</p>
+<p>Quick glance for demos: after you run the gate or send an order ticket, this chip updates so the audience sees the referee’s latest call.</p>`,
+  },
+  "help-fg": {
+    title: "Fear & Greed",
+    body: `<p>CMC’s <b>Fear &amp; Greed</b> index (Pro series) with a short spark history.</p>
+<p>Witness may fold the latest reading into the pre-trade score as a regime chip when CMC returns it. Extreme fear/greed is context — not an automatic ALLOW or BLOCK.</p>
+<p><b>Source:</b> CMC Fear &amp; Greed (v3) · Pro floor.</p>`,
+  },
+  "help-alt": {
+    title: "Altcoin Season",
+    body: `<p>CMC <b>Altcoin Season</b> index — roughly how many alts are outperforming BTC over a window.</p>
+<p>Shown on the Pro pulse row for rotation context. It does not by itself mean “buy alts”; the live gate still decides per-asset clearance.</p>
+<p><b>Source:</b> CMC altcoin season / related Pro series.</p>`,
+  },
+  "help-mcap-spark": {
+    title: "Global mcap spark",
+    body: `<p>Short daily spark of aggregate market cap so judges see trend, not just the hero KPI number.</p>
+<p>Same CMC global series as the Mcap chip — floor context for the referee, not a portfolio instruction.</p>`,
+  },
+  "help-btc-ohlcv": {
+    title: "BTC · 30d OHLCV",
+    body: `<p>Bitcoin close series from CMC OHLCV (Pro), plus ATH/ATL cycle line when available.</p>
+<p>Drawdown and range can enter the gate score for BTC checks. Never invents candles — blank if CMC did not return the series.</p>`,
+  },
+  "help-eth-ohlcv": {
+    title: "ETH · 30d OHLCV",
+    body: `<p>Ethereum close series from CMC OHLCV (Pro), with cycle line when available.</p>
+<p>Same role as BTC: real Pro evidence for the floor and for ETH gate runs — no fabricated RSI.</p>`,
+  },
+  "help-top": {
+    title: "Top mcap",
+    body: `<p>Largest assets by CMC market cap with logos and 24h change.</p>
+<p>Click a row to prefill the live gate. This list is the Pro floor’s “who is liquid,” not a buy list.</p>`,
+  },
+  "help-gainers": {
+    title: "Gainers",
+    body: `<p>Top 24h percent gainers from CMC Pro listings.</p>
+<p>High % moves often need extra scrutiny — use the gate; Witness does not treat a gainer as ALLOW by default.</p>`,
+  },
+  "help-losers": {
+    title: "Losers",
+    body: `<p>Top 24h percent losers from CMC Pro listings.</p>
+<p>Shown for floor completeness. A loser is not automatically BLOCK — run the symbol through the live gate.</p>`,
+  },
+  "help-heat": {
+    title: "Heat",
+    body: `<p>Short heat lists (volume / movers) from the Pro floor for quick scanning.</p>
+<p>Heat ≠ clearance. Always gate before an agent sizes.</p>`,
+  },
+  "help-listings": {
+    title: "New + sectors",
+    body: `<p><b>New listings</b> and <b>categories by mcap</b> from CMC.</p>
+<p>New tickers are exactly where collision / rug demos matter — propose them in the theatre or gate them live. Sectors give context beside the gate, not sizing advice.</p>`,
   },
 };
 
@@ -251,13 +356,14 @@ function assetCell(c) {
   return `<div class="asset-cell">${logoHtml(c)}<div class="asset-meta"><span class="sym">${escapeHtml(c.symbol)}</span><span class="nm">${escapeHtml(c.name || "")}</span></div></div>`;
 }
 
-function openDrawer({ kicker, title, bodyHtml, mode }) {
+function openDrawer({ kicker, title, body, bodyHtml, mode }) {
   state.drawerMode = mode || null;
   els.drawerKicker.textContent = kicker || "Detail";
   els.drawerTitle.textContent = title || "—";
   els.drawerBody.innerHTML = "";
-  if (typeof bodyHtml === "string") els.drawerBody.innerHTML = bodyHtml;
-  else if (bodyHtml instanceof Node) els.drawerBody.appendChild(bodyHtml);
+  const html = bodyHtml ?? body;
+  if (typeof html === "string") els.drawerBody.innerHTML = html;
+  else if (html instanceof Node) els.drawerBody.appendChild(html);
   els.drawer.classList.add("open");
   els.drawer.setAttribute("aria-hidden", "false");
   els.drawerScrim.hidden = false;
@@ -274,9 +380,10 @@ function closeDrawer() {
   state.drawerMode = null;
 }
 
-function openModal({ title, bodyHtml }) {
+function openModal({ title, body, bodyHtml }) {
+  const html = bodyHtml ?? body ?? "";
   els.modalTitle.textContent = title || "Help";
-  els.modalBody.innerHTML = bodyHtml || "";
+  els.modalBody.innerHTML = typeof html === "string" ? html : "";
   els.modal.hidden = false;
   els.modal.setAttribute("aria-hidden", "false");
   els.modalScrim.hidden = false;
