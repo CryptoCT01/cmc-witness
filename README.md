@@ -3,19 +3,19 @@
 **The market-truth judge for AI trading agents.**  
 CoinMarketCap **Build with CMC** · Track: **AI Agents & Automation** · **#BuildwithCMC**
 
-Agents that ape first and ask later are reckless. **CMC Witness** is the opposing counsel: it pays for CoinMarketCap data (x402 or API key), builds a multi-endpoint **Market Dossier**, scores `allow | caution | block`, and seals every call into a **tamper-evident receipt chain** judges can replay in the **Judge Console**.
+Agents that ape first and ask later are reckless. **CMC Witness** is opposing counsel: pay for CoinMarketCap (x402 or API key) → multi-endpoint **Market Dossier** → `allow | caution | block` → **tamper-evident receipt chain** replayable in the **Judge Console**.
 
 ```text
 Reckless Agent proposes BTC → ETH → RUG → low-cap tail
          ↓
-Witness dossier: quotes + listings + conditional dex/search
+Witness dossier: quotes + listings + conditional DEX (+ Pro context when keyed)
          ↓
 JUDGMENT + Market Receipt v2 (evidence[] · prev_hash · chain_height)
 ```
 
-**Pro-smart gate:** live key mode pulls Fear & Greed, BTC.D, ATH drawdown, and OHLCV range into the score (reason chips — never invents metrics). Fixture mode stays offline-deterministic.
+**Pro-smart gate:** live key mode folds Fear & Greed, BTC.D, ATH drawdown, and OHLCV range into the score as **reason chips** — never invents metrics. Fixture mode stays offline-deterministic.
 
-**Why this wows:** not another “AI that reads a quote.” It’s a **courtroom demo** — duel the reckless agent, inspect endpoint evidence, verify the chain, open a dark crypto-native console. Metrics on the **receipt** are **only** what CMC returned for the gate. Witness **never invents** RSI or synthetic indicators. Fear&Greed / BTC.D / ATH / OHLCV enter the **gate score** when CMC returned them; the floor also shows Pro series as labeled context — never invented.
+**Judge wow (offline):** duel BTC/ETH/RUG → Fake BTC **collision** vs canonical ALLOW → rug/contract **BLOCK** → **Propose → Witness → Fill** order theatre → scrub the chain. **~18 Pro floor series** behind `/api/market-floor`. Witness never invents RSI.
 
 ---
 
@@ -40,6 +40,8 @@ pnpm console
 ```
 
 Expected duel: **BTC → ALLOW**, **ETH → ALLOW/CAUTION**, **RUG → BLOCK**, optional listings-tail micro-cap judged too.
+
+Console one-clicks (fixture, no live credits): **Fake BTC collision** · **Rug path** · **Propose → Witness → Fill**.
 
 ---
 
@@ -125,7 +127,7 @@ Optional hosted MCP (we still ship our own receipt-layer MCP):
 
 ## Judge Console + Pro Market Floor
 
-Fullscreen-ready terminal for hackathon judges — **CMC Pro market floor** (live global KPIs, F&G + mcap + BTC/ETH sparklines, top mcap board with logos, gainers/losers, trending, categories, airdrops) plus the pre-trade gate, dossier evidence, scrubbable receipt chain, and **Duel Theatre**. Gate sits **in** market context, not alone. Honest labels: **gate ≠ buy**; Pro panels = market context from CMC.
+Fullscreen terminal for judges — **~18 CMC Pro series** (global KPIs, F&G + mcap + BTC/ETH OHLCV, top board + logos, gainers/losers, trending, categories, airdrops) plus **Pro-smart gate**, collision/rug demos, **Propose → Witness → Fill**, scrubbable receipt chain, and **Duel Theatre**. Gate sits **in** market context. Honest labels: **ALLOW ≠ long/short**; **BLOCK = don’t touch**.
 
 ```bash
 pnpm witness duel --fixture   # writes duel-report.json (+ receipts JSONL)
@@ -133,14 +135,13 @@ pnpm console                  # → http://127.0.0.1:4173
 # with CMC_API_KEY in .env → live /api/market-floor
 ```
 
-**How to open**
+**How to open (offline judges)**
 
-1. Put `CMC_API_KEY` in `.env` (gitignored) for the live Pro floor. Without a key, `/api/market-floor` returns **503** (or labeled **MOCK** if `?mock=1` / `CMC_WITNESS_MARKET_FLOOR_MOCK=1`).
-2. Run the fixture duel (offline gate demo).
-3. `pnpm console` → open **http://127.0.0.1:4173**.
-4. Market strip + panels load from **`GET /api/market-floor`** (in-memory cache ~60s).
-5. Run a live check — verdict + dossier; when Pro key is present, **price-performance** + **OHLCV spark** attach.
-6. Hit **Theatre** (or Space) for Reckless vs Witness; scrub the receipt chain.
+1. `pnpm witness duel --fixture` then `pnpm console` → **http://127.0.0.1:4173**.
+2. Without a key, `/api/market-floor` returns **503** (or labeled **MOCK** via `?mock=1` / `CMC_WITNESS_MARKET_FLOOR_MOCK=1`).
+3. Hit **Fake BTC** (canonical ALLOW vs junk ticker BLOCK) · **Rug path** · send an order ticket (**Propose → Fill**).
+4. Hit **▶ Duel** (or Space) for Reckless vs Witness; scrub the receipt chain.
+5. Optional live: set `CMC_API_KEY` → real `/api/market-floor` + Pro enrichment on `/api/check`.
 
 Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.png`, `screenshots/judge-console-splash.png`.
 
@@ -148,10 +149,13 @@ Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.pn
 
 | Route | Purpose |
 |-------|---------|
-| `GET /api/market-floor` | Aggregated Pro market floor JSON (parallel CMC calls, ~55s cache) |
+| `GET /api/market-floor` | Aggregated Pro market floor (~18 series, ~60s cache) |
 | `GET /api/market-floor?refresh=1` | Bypass cache |
 | `GET /api/market-floor?mock=1` | Labeled MOCK sample when no key |
-| `GET /api/check?symbol=BTC` | Gate + receipt; attaches `price_performance` + `ohlcv_spark` when key present |
+| `GET /api/check?symbol=BTC` | Gate + receipt; Pro `price_performance` + `ohlcv_spark` when keyed |
+| `GET /api/demo/collision` | Canonical BTC ALLOW vs FAKEBTC junk-ticker BLOCK |
+| `GET /api/demo/rug` | RUG / low-liq path → BLOCK |
+| `POST /api/demo/order` | Propose → Witness → Fill theatre ticket (`side`/`symbol`/`size`) |
 | `GET /api/receipts` | Receipt chain JSONL |
 | `GET /duel-report.json` | Latest duel report |
 
@@ -170,9 +174,9 @@ Screenshots: `screenshots/judge-console.png`, `screenshots/judge-console-full.pn
 | DEX search | `/x402/v1/dex/search` | `/v1/dex/search` |
 | DEX pair quotes | `/x402/v4/dex/pairs/quotes/latest` | `/v4/dex/pairs/quotes/latest` |
 
-### Pro market floor (`GET /api/market-floor`)
+### Pro market floor (`GET /api/market-floor`) — ~18 series
 
-Parallel key-auth calls via `src/cmc/market-floor.ts` (credits cached ~60s):
+Parallel key-auth calls via `src/cmc/market-floor.ts` (credits cached ~60s; logos batch via `/v2/cryptocurrency/info`):
 
 | Panel / series | Endpoint |
 |----------------|----------|
@@ -249,8 +253,10 @@ tests/
 - [x] Own **MCP server** with receipt + chain layer
 - [x] Core agent tool: `before_you_trade` (+ `investigate`)
 - [x] Reckless vs Witness **duel** + `duel-report.json`
+- [x] **Pro-smart gate** (F&G / BTC.D / ATH / OHLCV → reason chips when CMC returns them)
+- [x] Fake BTC **collision** + rug demos · **Propose → Witness → Fill** theatre
 - [x] Tamper-evident **receipt chain** (`pnpm witness chain`)
-- [x] **Judge Console** UI + **Pro market floor** (`/api/market-floor`) for demo video / live judging
+- [x] **Judge Console** + **~18-endpoint Pro floor** (`/api/market-floor`) for demo / live judging
 - [x] Offline fixture mode for judges (no secrets)
 - [x] MIT license, `.env.example`, never commit secrets
 - [x] Documents CMC x402 endpoints + optional hosted MCP URL

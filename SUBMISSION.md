@@ -7,7 +7,7 @@ Repo: https://github.com/CryptoCT01/cmc-witness
 
 ## 1. One-liner + track
 
-**CMC Witness** is the market-truth judge for AI trading agents: it pays for CoinMarketCap data (x402 or API key), builds a multi-endpoint Market Dossier, scores `allow | caution | block`, and seals every call into a tamper-evident receipt chain.
+**CMC Witness** — pre-trade gate for AI trading agents: pay CMC (x402 or key) → multi-endpoint dossier → `allow | caution | block` → tamper-evident Market Receipts. Pro-smart score (F&G / BTC.D / ATH / OHLCV chips) · Fake BTC collision & rug demos · Propose→Fill theatre · ~18-endpoint Pro floor.
 
 **Track:** AI Agents & Automation · **#BuildwithCMC**
 
@@ -28,10 +28,13 @@ Repo: https://github.com/CryptoCT01/cmc-witness
 | **Own MCP server** (`pnpm mcp`) | Tools: `before_you_trade`, `investigate`, `market_receipt_latest`, `verify_chain`, `quote`, `dex_search` — agents call from Cursor / Claude |
 | **x402 pay path** | USDC on Base via `EVM_PRIVATE_KEY` / `X402_PRIVATE_KEY`; preferred when set (~$0.01 / request) |
 | **Market Receipts v2** | `evidence[]` · `prev_hash` · `chain_height` · JSONL at `./receipts/market-receipts.jsonl` |
-| **Pro Market Floor** | Judge Console terminal: live global KPIs, F&G, Altcoin Season, top board, gainers/losers, trending, categories, airdrops, BTC/ETH OHLCV |
-| **Pre-trade gate** | `allow \| caution \| block` + score 0–100 + reasons; gate ≠ buy — labeled honestly in UI |
+| **Pro-smart gate** | F&G · BTC.D · ATH drawdown · OHLCV range enter the **score** as reason chips when CMC returns them (fixtures stay offline-deterministic) |
+| **Pro Market Floor** | ~18 CMC series in Judge Console: global KPIs, F&G, Altcoin Season, top board + logos, gainers/losers, trending, categories, airdrops, BTC/ETH OHLCV |
+| **Collision / rug demos** | `/api/demo/collision` (canonical BTC vs FAKEBTC) · `/api/demo/rug` → BLOCK |
+| **Propose → Witness → Fill** | `POST /api/demo/order` — simulated agent ticket; FILL allowed or REJECTED by Witness |
+| **Pre-trade gate** | `allow \| caution \| block` + score 0–100 + reasons; **ALLOW ≠ long/short** — labeled honestly in UI |
 
-Also: Reckless vs Witness **duel** (`pnpm witness duel`), offline fixtures for judges, MIT + `.env.example`.
+Also: Reckless vs Witness **duel** (`pnpm witness duel --fixture`), offline fixtures for judges, MIT + `.env.example`.
 
 ---
 
@@ -48,7 +51,7 @@ Also: Reckless vs Witness **duel** (`pnpm witness duel`), offline fixtures for j
 | DEX search | `/x402/v1/dex/search` | `/v1/dex/search` |
 | DEX pair quotes | `/x402/v4/dex/pairs/quotes/latest` | `/v4/dex/pairs/quotes/latest` |
 
-### Pro market floor (`GET /api/market-floor`)
+### Pro market floor (`GET /api/market-floor`) — ~18 series
 
 | Panel / series | Endpoint |
 |----------------|----------|
@@ -104,12 +107,13 @@ Fixture mode (`--fixture`) proves the gate + chain offline with no secrets.
 
 | Beat | Time | On screen / VO |
 |------|------|----------------|
-| Hook | 0–8s | Splash: “market-truth judge for AI agents” · Track badge · #BuildwithCMC |
+| Hook | 0–8s | Splash: “pre-trade gate for AI agents” · Track badge · #BuildwithCMC |
 | Problem | 8–18s | Reckless agent proposes BTC → ETH → RUG → low-cap tail |
-| Duel | 18–35s | `pnpm witness duel --fixture` → BTC ALLOW, ETH ALLOW/CAUTION, RUG BLOCK · open `duel-report.json` |
-| Receipts | 35–50s | Scrub receipt chain: `evidence[]`, `prev_hash`, `chain_height` · `pnpm witness chain` |
-| Console + floor | 50–70s | `pnpm console` → Pro Market Floor (F&G, Altcoin Season, top board) · live gate check with Pro enrichment |
-| Close | 70–90s | MCP tools list · repo URL · “ALLOW ≠ long — bots clear Witness before size” |
+| Duel | 18–32s | `pnpm witness duel --fixture` → BTC ALLOW, ETH ALLOW/CAUTION, RUG BLOCK · `duel-report.json` |
+| Collision / rug | 32–45s | Fake BTC collision (ALLOW vs junk BLOCK) · Rug path BLOCK · reason chips |
+| Propose→Fill | 45–58s | Order ticket: Propose → Witness → FILL allowed / REJECTED |
+| Receipts + floor | 58–78s | Scrub chain (`prev_hash`) · Pro floor (~18 series / MOCK offline) |
+| Close | 78–90s | MCP · x402 · repo URL · “ALLOW ≠ long — bots clear Witness before size” |
 
 Screenshots: `screenshots/judge-console.png`, `judge-console-full.png`, `judge-console-splash.png`.
 
@@ -121,9 +125,9 @@ Screenshots: `screenshots/judge-console.png`, `judge-console-full.png`, `judge-c
 AI agents that ape first get wrecked.
 
 CMC Witness is opposing counsel for trading bots:
-• Multi-endpoint Market Dossier (quotes + listings + DEX)
-• allow | caution | block before size
-• Tamper-evident Market Receipts + Judge Console Pro floor
+• Pro-smart gate (F&G / BTC.D / ATH / OHLCV chips — never invents metrics)
+• Fake BTC collision + rug demos · Propose→Fill theatre
+• Tamper-evident Market Receipts + ~18-endpoint Pro floor
 • x402 pay-per-call or CMC API key
 
 Track: AI Agents & Automation
@@ -144,8 +148,9 @@ https://github.com/CryptoCT01/cmc-witness
 
 **Enabled**
 
-- Credible multi-endpoint dossiers: quotes, listings, conditional DEX — enough to judge majors vs rug-like symbols without inventing metrics.
-- Pro Market Floor context (global metrics, Fear & Greed, Altcoin Season, OHLCV, categories, airdrops) so the gate sits in live market context, not a vacuum.
+- Credible multi-endpoint dossiers: quotes, listings, conditional DEX — enough to judge majors vs rug-like / colliding tickers without inventing metrics.
+- Pro-smart gate: Fear & Greed, BTC.D, ATH drawdown, OHLCV range feed the **score** (reason chips) when CMC returns them.
+- ~18-series Pro Market Floor so the gate sits in live market context; collision + Propose→Fill demos for judges offline.
 - x402 path for pay-per-request demos; key path for credit-efficient floor aggregation (~60s cache).
 - `status_timestamp` + `credit_count` on evidence rows — judges can verify a real CMC response.
 

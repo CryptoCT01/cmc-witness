@@ -39,7 +39,7 @@
       <span class="sp c">Pro series</span>
       <span class="sp g">Pre-trade gate</span>
     </div>
-    <button class="enter" id="enterBtn" type="button">Enter the floor</button>
+    <button class="enter" id="enterBtn" type="button" aria-label="Enter the market floor">Enter the floor</button>
     <div class="splash-trust">Ticker collisions · low-liq / rug paths · Pro regime chips · never invents metrics</div>
   </div>
 
@@ -98,9 +98,9 @@
         </label>
         <button class="act-mini" id="reloadBtn" type="button">Reload</button>
         <button class="act-mini" id="refreshFloorBtn" type="button">↻ Floor</button>
-        <button class="act-mini" id="demoCollisionBtn" type="button">Fake BTC</button>
-        <button class="act-mini" id="demoRugBtn" type="button">Rug path</button>
-        <button class="act-mini gold" id="theatreBtn" type="button">▶ Duel</button>
+        <button class="act-mini" id="demoCollisionBtn" type="button" aria-label="Demo Fake BTC collision">Fake BTC</button>
+        <button class="act-mini" id="demoRugBtn" type="button" aria-label="Demo rug path">Rug path</button>
+        <button class="act-mini gold" id="theatreBtn" type="button" aria-label="Play duel theatre">▶ Duel</button>
       </div>
     </div>
 
@@ -205,7 +205,7 @@
             <span class="dot g"></span>
             <div>
               <div class="ph-t">Live gate</div>
-              <div class="ph-s">Symbol → ALLOW / BLOCK</div>
+              <div class="ph-s">Symbol → ALLOW / CAUTION / BLOCK</div>
             </div>
           </div>
           <button class="help-btn" type="button" data-modal="help-gate" aria-label="Gate help">?</button>
@@ -213,12 +213,12 @@
         <div class="panel-body gate-body">
           <form class="gate-form" id="gateForm">
             <div class="gf-row">
-              <input id="symInput" name="symbol" type="text" placeholder="BTC · ETH · RUG · FAKEBTC · 0x…" autocomplete="off" spellcheck="false" />
-              <button class="run-btn" type="submit" id="runGateBtn">Gate</button>
+              <input id="symInput" name="symbol" type="text" placeholder="BTC · ETH · RUG · FAKEBTC · 0x…" autocomplete="off" spellcheck="false" aria-label="Symbol to gate" />
+              <button class="run-btn" type="submit" id="runGateBtn" aria-label="Run pre-trade gate">Gate</button>
             </div>
             <div class="demo-row">
-              <button type="button" class="demo-btn" id="gateDemoCollision">Fake BTC collision</button>
-              <button type="button" class="demo-btn danger" id="gateDemoRug">Rug / contract</button>
+              <button type="button" class="demo-btn" id="gateDemoCollision" aria-label="Demo Fake BTC collision">Fake BTC collision</button>
+              <button type="button" class="demo-btn danger" id="gateDemoRug" aria-label="Demo rug or contract path">Rug / contract</button>
             </div>
             <p class="gf-hint" id="gateHint">ALLOW = okay to touch · NOT “go long” · Pro key feeds score</p>
           </form>
@@ -391,7 +391,7 @@
               </div>
               <input id="orderSym" type="text" value="BTC" maxlength="16" spellcheck="false" aria-label="Symbol" />
               <input id="orderSize" type="number" value="1" min="0.01" step="any" aria-label="Size" />
-              <button class="run-btn order-run" type="submit" id="orderSubmit">Send</button>
+              <button class="run-btn order-run" type="submit" id="orderSubmit" aria-label="Propose order to Witness">Send</button>
             </div>
           </form>
 
@@ -414,11 +414,11 @@
             <span class="cs-line" id="recklessLine">Load a duel or run the gate.</span>
           </div>
           <div class="ops-row">
-            <button type="button" class="ops-chip" id="openChainBtn">
+            <button type="button" class="ops-chip" id="openChainBtn" aria-label="Open receipt chain">
               <span class="oc-k">Receipt chain</span>
               <span class="oc-v" id="chainChipVal">0 linked · open →</span>
             </button>
-            <button type="button" class="ops-chip duel" id="openDuelBtn">
+            <button type="button" class="ops-chip duel" id="openDuelBtn" aria-label="Open agent duel">
               <span class="oc-k">Agent duel</span>
               <span class="oc-v" id="duelChipVal">Reckless vs Witness →</span>
             </button>
@@ -478,9 +478,9 @@
       </div>
     </div>
     <div class="duel-nav">
-      <button class="act-mini" id="prevBtn" type="button">←</button>
+      <button class="act-mini" id="prevBtn" type="button" aria-label="Previous duel round">←</button>
       <div class="stepper" id="stepper"></div>
-      <button class="act-mini" id="nextBtn" type="button">→</button>
+      <button class="act-mini" id="nextBtn" type="button" aria-label="Next duel round">→</button>
     </div>
     <div class="feed" id="feed"></div>
     <div class="chain-scrub">
