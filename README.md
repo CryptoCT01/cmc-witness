@@ -17,6 +17,8 @@ JUDGMENT + Market Receipt v2 (evidence[] · prev_hash · chain_height)
 
 **Judge wow (offline):** duel BTC/ETH/RUG → Fake BTC **collision** vs canonical ALLOW → rug/contract **BLOCK** → **Propose → Witness → Fill** order theatre → scrub the chain. **~18 Pro floor series** behind `/api/market-floor`. Witness never invents RSI.
 
+![CMC Witness Judge Console — RUG BLOCK](screenshots/judge-console.png)
+
 ---
 
 ## Judge demo in 60 seconds (offline)
